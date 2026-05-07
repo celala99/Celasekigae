@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>席替えアプリ 🎲</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --primary: #4a6fa5;
+      --primary-dark: #2d4e8a;
+      --primary-light: #7396c8;
+      --accent: #f0a500;
+      --accent-light: #ffd166;
+      --success: #06b96c;
+      --danger: #e74c3c;
+      --bg: #f0f4fb;
+      --card: #ffffff;
+      --text: #2c3e50;
+      --text-light: #7f8c9a;
+      --border: #d1dae8;
+      --shadow: 0 4px 16px rgba(74,111,165,0.13);
+      --radius: 14px;
+      --desk-width: 96px;
+      --desk-height: 76px;
+      /* 座席カラー（変更可能） */
+      --seat-border: #7396c8;
+      --seat-bg: #ffffff;
+      --seat-text: #2c3e50;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+      color: white;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 3px 12px rgba(44,78,138,0.35);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header .logo { font-size: 1.9rem; }
+    header h1 { font-size: 1.5rem; font-weight: 900; letter-spacing: 0.04em; }
+    header .subtitle { font-size: 0.83rem; opacity: 0.8; }
+
+    /* ===== STEPS BAR ===== */
+    .steps-bar {
+      background: white;
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    .step-btn {
+      padding: 14px 24px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-light);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-btn:hover { color: var(--primary); }
+    .step-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+    .step-btn .step-num {
+      width: 22px; height: 22px;
+      background: var(--border);
+      border-radius: 50%;
+      font-size: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .step-btn.active .step-num { background: var(--primary); color: white; }
+    .step-btn.done .step-num { background: var(--success); color: white; }
+
+    /* ===== MAIN LAYOUT ===== */
+    main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== FORM ELEMENTS ===== */
+    label { font-size: 0.88rem; font-weight: 500; color: var(--text-light); display: block; margin-bottom: 5px; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      color: var(--text);
+      background: #fafcff;
+      transition: border 0.2s;
+    }
+    input[type="color"] {
+      width: 44px; height: 34px;
+      padding: 2px 4px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      background: white;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+    }
+    textarea { resize: vertical; min-height: 180px; line-height: 1.7; }
+
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .form-group { flex: 1; min-width: 140px; }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 20px;
+      border: none; border-radius: 9px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.18s;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(74,111,165,0.35); }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-accent:hover { background: #d4900b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(240,165,0,0.35); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #058c52; transform: translateY(-1px); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-outline:hover { background: var(--bg); }
+    .btn-sm { padding: 5px 12px; font-size: 0.82rem; border-radius: 7px; }
+    .btn-lg { padding: 14px 32px; font-size: 1.05rem; border-radius: 12px; }
+    .btn-xl { padding: 20px 48px; font-size: 1.3rem; border-radius: 16px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    /* ===== TOGGLE SWITCH ===== */
+    .toggle-wrap {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 6px 12px;
+    }
+    .toggle-label { font-size: 0.88rem; font-weight: 600; color: var(--text-light); white-space: nowrap; }
+    .toggle-switch {
+      position: relative; width: 48px; height: 26px;
+      display: inline-block; flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--border); border-radius: 26px;
+      transition: .3s; cursor: pointer;
+    }
+    .toggle-track::before {
+      content: ''; position: absolute;
+      width: 20px; height: 20px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%;
+      transition: .3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .toggle-track { background: var(--primary); }
+    input:checked + .toggle-track::before { transform: translateX(22px); }
+    .toggle-active-label { font-size: 0.82rem; font-weight: 700; color: var(--primary); min-width: 48px; }
+
+    /* ===== STUDENT TABLE ===== */
+    .student-table-wrap { overflow-x: auto; }
+    table.student-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    table.student-table th {
+      background: var(--primary);
+      color: white;
+      padding: 9px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    table.student-table td {
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    table.student-table tr:hover td { background: #f0f4fb; }
+    table.student-table tr.absent td { opacity: 0.4; text-decoration: line-through; }
+    .en-name-cell { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
+
+    /* ===== SEAT LAYOUT EDITOR ===== */
+    .layout-grid {
+      display: inline-grid;
+      gap: 10px;
+      padding: 16px;
+      background: #e8eef8;
+      border-radius: 12px;
+    }
+    .seat-cell {
+      width: var(--desk-width);
+      height: var(--desk-height);
+      border-radius: 9px;
+      border: 2px solid var(--seat-border);
+      background: var(--seat-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s;
+      position: relative;
+      user-select: none;
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 4px;
+    }
+    .seat-cell:hover { filter: brightness(0.93); }
+    .seat-cell.empty {
+      border-style: dashed;
+      border-color: #b0b8cc !important;
+      background: #f4f6fa !important;
+      opacity: 0.6;
+    }
+    .seat-cell.empty:hover { opacity: 1; border-color: var(--danger) !important; }
+    .seat-cell .seat-num { font-size: 0.72rem; color: var(--seat-border); font-weight: 700; }
+
+    /* ===== FIXED SEAT ===== */
+    .seat-cell.fixed {
+      border: 2.5px solid #e67e22 !important;
+      background: #fff8f0 !important;
+    }
+    .seat-cell.fixed:hover { border-color: #d35400 !important; }
+    .seat-cell .fixed-badge {
+      position: absolute;
+      top: 3px; right: 4px;
+      font-size: 0.6rem;
+      background: #e67e22;
+      color: white;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .seat-cell .fixed-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #a04000;
+      line-height: 1.2;
+      text-align: center;
+      margin-top: 2px;
+    }
+    /* 固定席モーダル */
+    .fixed-modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .fixed-modal-overlay.open { display: flex; }
+    .fixed-modal {
+      background: white;
+      border-radius: 18px;
+      padding: 28px 28px 24px;
+      max-width: 420px;
+      width: 92%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .fixed-modal h3 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #e67e22;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fixed-modal .seat-pos-label {
+      font-size: 0.82rem;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+    .fixed-modal select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      background: #fafcff;
+    }
+    .fixed-modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    /* 固定席リスト（設定パネル） */
+    .fixed-list {
+      font-size: 0.84rem;
+      margin-top: 4px;
+    }
+    .fixed-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      border-radius: 7px;
+      background: #fff8f0;
+      border: 1px solid #f5cba7;
+      margin-bottom: 5px;
+      gap: 8px;
+    }
+    .fixed-list-item .fix-info { flex: 1; color: #784212; font-weight: 600; }
+    .fixed-list-item .fix-seat { font-size: 0.75rem; color: #a04000; }
+
+    /* ===== CLASSROOM WRAPPER ===== */
+    .classroom-wrap { overflow-x: auto; padding: 10px 0; }
+    .classroom {
+      display: inline-block;
+      background: linear-gradient(160deg, #eaf0fb 0%, #d8e4f5 100%);
+      border-radius: 18px;
+      padding: 24px 28px 32px;
+      border: 2px solid var(--border);
+      min-width: min-content;
+    }
+    .podium-row { text-align: center; margin-bottom: 20px; }
+    .podium {
+      display: inline-block;
+      background: linear-gradient(135deg, #2c3e50, #3d5166);
+      color: white;
+      padding: 10px 48px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .direction-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    /* ===== RESULT SEAT ===== */
+    .result-seat {
+      width: var(--desk-width);
+      height: var(--desk-height);
+      border-radius: 9px;
+      border: 2px solid var(--seat-border);
+      background: var(--seat-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      font-size: 0.76rem;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(74,111,165,0.1);
+    }
+    .result-seat.empty-seat {
+      border-style: dashed;
+      border-color: #c8d3e8 !important;
+      background: #f4f6fa !important;
+      opacity: 0.5;
+    }
+    .result-seat .s-num { font-size: 0.68rem; color: var(--seat-border); font-weight: 700; }
+    .result-seat .s-name { font-weight: 700; font-size: 0.82rem; color: var(--seat-text); line-height: 1.2; }
+    .result-seat .s-en { font-size: 0.65rem; color: #7f8c9a; font-style: italic; line-height: 1.2; margin-top: 1px; }
+
+    /* ===== LOTTERY ANIMATION ===== */
+    .lottery-classroom {
+      display: inline-block;
+      background: linear-gradient(160deg, #0f1a3a 0%, #1a2d5a 60%, #0f1a3a 100%);
+      border-radius: 16px;
+      padding: 10px 12px 14px;
+      border: 2px solid #2a3d6a;
+      position: relative;
+      overflow: hidden;
+      /* transform-origin はオーバーライドで設定 */
+    }
+    .lottery-classroom::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent, transparent 20px,
+        rgba(255,255,255,0.015) 20px, rgba(255,255,255,0.015) 40px
+      );
+    }
+    .lottery-podium {
+      display: inline-block;
+      background: linear-gradient(135deg, #f0a500, #d4900b);
+      color: #1a1a1a;
+      padding: 5px 28px;
+      border-radius: 8px;
+      font-weight: 900;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      box-shadow: 0 0 16px rgba(240,165,0,0.5);
+    }
+    .lottery-grid { display: inline-grid; gap: 8px; }
+    .lottery-desk {
+      /* width/height はJS側でインラインスタイルで設定 */
+      border-radius: 9px;
+      border: 2px solid #3a5090;
+      background: #1e2e55;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .lottery-desk.empty-desk {
+      border-style: dashed;
+      border-color: #2a3d5a;
+      background: #141e38;
+      opacity: 0.4;
+    }
+    .lottery-desk.confirmed {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #1e3a2a, #0d2a1a);
+      box-shadow: 0 0 18px rgba(6,185,108,0.45);
+    }
+    .lottery-desk .roll-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7ab8ff;
+      text-align: center;
+      line-height: 1.25;
+    }
+    .lottery-desk.rolling .roll-name {
+      color: #ffd166;
+      animation: rollText 0.08s infinite;
+    }
+    .lottery-desk.confirmed .roll-name { color: #4ade80; animation: none; }
+    .lottery-desk .roll-num {
+      font-size: 0.68rem;
+      color: #5a7ab0;
+      margin-bottom: 2px;
+    }
+    .lottery-desk.confirmed .roll-num { color: #86efac; }
+
+    @keyframes rollText {
+      0% { transform: translateY(-2px); opacity: 0.7; }
+      50% { transform: translateY(2px); opacity: 1; }
+      100% { transform: translateY(-2px); opacity: 0.7; }
+    }
+    @keyframes confirmPulse {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.12); }
+      60% { transform: scale(0.96); }
+      100% { transform: scale(1); }
+    }
+    .lottery-desk.just-confirmed { animation: confirmPulse 0.5s ease; }
+
+    /* ===== LOTTERY OVERLAY ===== */
+    #lottery-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(5, 10, 30, 0.95);
+      z-index: 500;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 2px 6px;
+      overflow: hidden;
+    }
+    #lottery-overlay.open { display: flex; }
+    .lottery-title {
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 900;
+      text-align: center;
+      text-shadow: 0 0 30px rgba(240,165,0,0.7);
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+    .lottery-title .sub { font-size: 0.75rem; opacity: 0.7; font-weight: 400; margin-top: 1px; }
+    .lottery-status {
+      color: #ffd166;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      min-height: 20px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .lottery-close-btn { margin-top: 6px; flex-shrink: 0; display: none; }
+
+    /* 抽選グリッドを画面内に収めるコンテナ */
+    #lottery-grid-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .lottery-classroom {
+      /* サイズはJSで動的にscaleを設定 */
+      transform-origin: center center;
+    }
+
+    /* Sound toggle in overlay */
+    .sound-toggle-overlay {
+      position: absolute;
+      top: 20px; right: 24px;
+      display: flex; align-items: center; gap: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .sound-toggle-overlay:hover { color: white; }
+
+    /* ===== FLASH ===== */
+    .flash-overlay {
+      position: fixed; inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transition: opacity 0.1s;
+    }
+    .flash-overlay.flash { opacity: 0.8; }
+
+    /* Stars background */
+    .stars-bg {
+      position: fixed; inset: 0; pointer-events: none; z-index: 499; display: none;
+    }
+    .stars-bg.open { display: block; }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 2s infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* Progress bar */
+    .lottery-progress {
+      width: min(300px, 80vw); height: 5px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .lottery-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ===== LOTTERY START SCREEN ===== */
+    .lottery-start-screen {
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .lottery-start-screen h2 {
+      font-size: 1.8rem; font-weight: 900; color: var(--primary); margin-bottom: 10px;
+    }
+    .lottery-start-screen p { color: var(--text-light); margin-bottom: 32px; font-size: 1rem; }
+    .info-chips { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px; }
+    .chip {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    /* sound control row */
+    .sound-row {
+      display: flex; justify-content: center; gap: 16px; align-items: center;
+      margin-bottom: 24px; flex-wrap: wrap;
+    }
+
+    /* ===== RESULT CONTROLS ===== */
+    .result-controls {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center;
+    }
+    .result-title-edit { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .result-title-edit input { max-width: 200px; }
+
+    /* ===== VIEW PERSPECTIVE TOGGLE ===== */
+    .perspective-toggle {
+      display: inline-flex;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .perspective-toggle button {
+      padding: 9px 18px;
+      border: none;
+      background: white;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .perspective-toggle button:last-child { border-right: none; }
+    .perspective-toggle button.active {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: white;
+    }
+    .perspective-toggle button:not(.active):hover { background: var(--bg); color: var(--primary); }
+
+    /* 視点バッジ */
+    .view-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .view-badge.student { background: #dbeafe; color: #1d4ed8; }
+    .view-badge.teacher { background: #fef3c7; color: #92400e; }
+
+    /* 教師目線: 上下反転アニメーション */
+    .classroom.flip-view {
+      position: relative;
+    }
+    .classroom.flip-view .layout-grid {
+      transform: rotate(180deg);
+    }
+    .classroom.flip-view .result-seat {
+      transform: rotate(180deg);
+    }
+
+    /* ===== COLOR SETTINGS ===== */
+    .color-row {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .color-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.85rem; font-weight: 600; color: var(--text);
+    }
+    .color-presets {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+    }
+    .preset-btn {
+      width: 28px; height: 28px;
+      border-radius: 6px; border: 2px solid transparent;
+      cursor: pointer; transition: transform 0.15s, border 0.15s;
+    }
+    .preset-btn:hover { transform: scale(1.2); }
+    .preset-btn.selected { border-color: #2c3e50; transform: scale(1.15); }
+    .display-mode-toggle {
+      display: inline-flex;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .display-mode-toggle button {
+      padding: 7px 18px;
+      border: none;
+      background: white;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .display-mode-toggle button.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* ===== TOAST ===== */
+    #toast-container {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: #2c3e50; color: white;
+      padding: 12px 20px; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      animation: toastIn 0.3s ease;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    @keyframes toastIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ===== MISC ===== */
+    .alert {
+      padding: 12px 16px; border-radius: 10px; font-size: 0.88rem; margin-bottom: 14px;
+    }
+    .alert-info { background: #dbeafe; color: #1d4ed8; border-left: 4px solid #3b82f6; }
+    .alert-warn { background: #fef3c7; color: #92400e; border-left: 4px solid var(--accent); }
+    .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
+
+    hr.divider { border: none; border-top: 1.5px solid var(--border); margin: 20px 0; }
+
+    .section-label {
+      font-size: 0.78rem; font-weight: 700; color: var(--text-light);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;
+    }
+    .count-badge {
+      background: var(--accent-light); color: #7a4f00;
+      border-radius: 6px; padding: 2px 9px;
+      font-size: 0.78rem; font-weight: 700; margin-left: 8px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f0f4fb; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      main { padding: 16px; }
+      header { padding: 12px 16px; }
+      header h1 { font-size: 1.2rem; }
+      .steps-bar { padding: 0 8px; }
+      .step-btn { padding: 10px 14px; font-size: 0.8rem; }
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      header, .steps-bar, .result-controls, nav { display: none !important; }
+      main { padding: 0 !important; }
+      .panel { display: block !important; }
+      #panel-1, #panel-2, #panel-3 { display: none !important; }
+      #panel-4 { display: block !important; }
+      body { background: white; }
+      .card { box-shadow: none !important; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">🎲</div>
+  <div>
+    <h1>席替えアプリ</h1>
+    <div class="subtitle">楽しく、スムーズに席替えを演出</div>
+  </div>
+</header>
+
+<!-- STEPS BAR -->
+<nav class="steps-bar">
+  <button class="step-btn active" onclick="showPanel(1)" id="step-btn-1">
+    <span class="step-num">1</span> 生徒登録
+  </button>
+  <button class="step-btn" onclick="showPanel(2)" id="step-btn-2">
+    <span class="step-num">2</span> 座席配置
+  </button>
+  <button class="step-btn" onclick="showPanel(3)" id="step-btn-3">
+    <span class="step-num">3</span> 席替え抽選
+  </button>
+  <button class="step-btn" onclick="showPanel(4)" id="step-btn-4">
+    <span class="step-num">4</span> 結果・出力
+  </button>
+</nav>
+
+<main>
+
+  <!-- ===== PANEL 1: 生徒登録 ===== -->
+  <div class="panel active" id="panel-1">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+      <!-- 一括入力 -->
+      <div class="card">
+        <div class="card-title"><i class="fas fa-paste"></i> 一括入力（コピー＆ペースト）</div>
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>形式：</strong>「番号 漢字名」または「番号 よみがな 漢字名」または「番号 よみがな 漢字名 英語名」<br>
+          例：<code>1 鈴木明子</code>　または　<code>1 すずきあきこ 鈴木明子</code>　または　<code>1 すずきあきこ 鈴木明子 Akiko Suzuki</code>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>貼り付けエリア（1行1人）</label>
+          <textarea id="bulk-input" placeholder="例（タブ・カンマ・スペース区切り）：
+1	やまだたろう	山田 太郎
+2	さとうはなこ	佐藤 花子	Hanako Sato
+3	鈴木朋子
+4	すずきあきこ	鈴木明子	Akiko Suzuki
+
+※よみがなは任意（省略可）
+※英語名は任意（省略可）"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="parseBulkInput()">
+            <i class="fas fa-file-import"></i> 読み込む
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="loadSampleData()">
+            <i class="fas fa-magic"></i> サンプルデータ
+          </button>
+        </div>
+      </div>
+
+      <!-- 個別入力 -->
+      <div class="card">
+        <div class="card-title"><i class="fas fa-user-plus"></i> 個別追加</div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:80px">
+            <label>番号</label>
+            <input type="number" id="add-num" min="1" max="99" placeholder="1">
+          </div>
+          <div class="form-group">
+            <label>よみがな（任意）</label>
+            <input type="text" id="add-name-ruby" placeholder="やまだ たろう">
+          </div>
+          <div class="form-group">
+            <label>名前（漢字）</label>
+            <input type="text" id="add-name" placeholder="山田 太郎">
+          </div>
+          <div class="form-group">
+            <label>英語名（任意）</label>
+            <input type="text" id="add-name-en" placeholder="Taro Yamada" onkeydown="if(event.key==='Enter')addStudent()">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addStudent()">
+          <i class="fas fa-plus"></i> 追加
+        </button>
+
+        <hr class="divider">
+        <div class="card-title" style="margin-bottom:10px"><i class="fas fa-cog"></i> クラス情報</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>クラス名</label>
+            <input type="text" id="class-name" placeholder="1年1組" value="1年1組">
+          </div>
+          <div class="form-group">
+            <label>実施日</label>
+            <input type="text" id="class-date" placeholder="2025/04/01">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 生徒リスト -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fas fa-users"></i> 生徒リスト
+        <span class="count-badge" id="student-count">0名</span>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="sortStudents()">
+            <i class="fas fa-sort-numeric-up"></i> 番号順
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllStudents()">
+            <i class="fas fa-trash"></i> 全削除
+          </button>
+        </div>
+      </div>
+      <div class="student-table-wrap">
+        <table class="student-table">
+          <thead>
+            <tr>
+              <th style="width:55px">番号</th>
+              <th>名前（日本語）</th>
+              <th>英語名</th>
+              <th style="width:80px">参加</th>
+              <th style="width:55px">削除</th>
+            </tr>
+          </thead>
+          <tbody id="student-tbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px; text-align:right;">
+        <button class="btn btn-primary btn-lg" onclick="goToStep2()">
+          次へ：座席配置を設定 <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PANEL 2: 座席配置 ===== -->
+  <div class="panel" id="panel-2">
+    <div style="display:grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start;">
+
+      <!-- 設定パネル -->
+      <div>
+        <div class="card">
+          <div class="card-title"><i class="fas fa-th"></i> 机の配置設定</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-arrows-alt-v"></i> 縦（行数）</label>
+              <input type="number" id="rows" value="6" min="1" max="12" onchange="updateLayout()">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-arrows-alt-h"></i> 横（列数）</label>
+              <input type="number" id="cols" value="6" min="1" max="12" onchange="updateLayout()">
+            </div>
+          </div>
+          <div class="alert alert-info" style="margin-top:8px">
+            <i class="fas fa-mouse-pointer"></i>
+            <strong>左クリック</strong>：空席 ON/OFF　／　<strong>右クリック</strong>：固定席設定
+          </div>
+          <hr class="divider">
+          <div class="section-label">現在の構成</div>
+          <div id="layout-stats" style="font-size:0.9rem; color:var(--text-light); line-height:2"></div>
+          <hr class="divider">
+          <button class="btn btn-outline btn-sm" onclick="resetEmptySeats()" style="margin-bottom:8px;width:100%">
+            <i class="fas fa-undo"></i> 空席をリセット
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="autoFillEmptySeats()" style="width:100%">
+            <i class="fas fa-magic"></i> 空席を自動設定
+          </button>
+        </div>
+
+        <!-- 📌 固定席設定 -->
+        <div class="card">
+          <div class="card-title"><i class="fas fa-thumbtack" style="color:#e67e22"></i> 固定席の設定
+            <span style="margin-left:auto;font-size:0.78rem;font-weight:500;color:var(--text-light)">右クリックで設定</span>
+          </div>
+          <div class="alert" style="background:#fff8f0;border-left:4px solid #e67e22;color:#784212;font-size:0.84rem;margin-bottom:12px">
+            <i class="fas fa-thumbtack"></i>
+            机を<strong>右クリック</strong>（長押し）して特定の生徒を固定できます。<br>
+            固定された生徒はランダム抽選から除外されます。
+          </div>
+          <div id="fixed-list" class="fixed-list">
+            <div style="color:var(--text-light);font-size:0.82rem">まだ固定席はありません</div>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%" onclick="clearAllFixed()">
+            <i class="fas fa-times-circle"></i> 固定席をすべて解除
+          </button>
+        </div>
+
+        <!-- 🎨 座席カラー設定 -->
+        <div class="card">
+          <div class="card-title"><i class="fas fa-palette"></i> 座席カラー設定</div>
+          <div class="color-row">
+            <div class="color-item">
+              <input type="color" id="color-border" value="#7396c8" oninput="applySeatColor()">
+              <span>枠の色</span>
+            </div>
+            <div class="color-item">
+              <input type="color" id="color-bg" value="#ffffff" oninput="applySeatColor()">
+              <span>背景色</span>
+            </div>
+            <div class="color-item">
+              <input type="color" id="color-text" value="#2c3e50" oninput="applySeatColor()">
+              <span>文字色</span>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:10px">プリセット</div>
+          <div class="color-presets" id="color-presets"></div>
+          <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="resetSeatColor()">
+            <i class="fas fa-undo"></i> デフォルトに戻す
+          </button>
+        </div>
+      </div>
+
+      <!-- レイアウトプレビュー -->
+      <div class="card">
+        <div class="card-title"><i class="fas fa-chalkboard-teacher"></i> 教室レイアウト
+          <span style="font-size:0.78rem;font-weight:500;color:var(--text-light);margin-left:4px">左クリック＝空席切替　右クリック＝固定席設定</span>
+        </div>
+        <div class="classroom-wrap">
+          <div class="classroom">
+            <div class="podium-row">
+              <div class="podium">📋 教卓（前方）</div>
+            </div>
+            <div class="direction-labels">
+              <span>← 窓側</span>
+              <span>廊下側 →</span>
+            </div>
+            <div id="layout-grid" class="layout-grid"></div>
+            <div style="text-align:center; margin-top:10px; font-size:0.78rem; color:#8899bb;">↑ 後方</div>
+          </div>
+        </div>
+        <div style="margin-top:16px; text-align:right;">
+          <button class="btn btn-primary btn-lg" onclick="goToStep3()">
+            次へ：席替え抽選へ <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PANEL 3: 席替え抽選 ===== -->
+  <div class="panel" id="panel-3">
+    <div class="lottery-start-screen">
+      <h2>🎲 席替え抽選</h2>
+      <p>ボタンを押すと座席がランダムに決まります！</p>
+      <div class="info-chips" id="lottery-info-chips"></div>
+
+      <!-- サウンド設定 -->
+      <div class="sound-row">
+        <div class="toggle-wrap">
+          <span class="toggle-label">🔊 効果音</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="sound-enabled" checked>
+            <span class="toggle-track"></span>
+          </label>
+          <span class="toggle-active-label" id="sound-label-text">ON</span>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label" style="min-width:48px">🔈 音量</span>
+          <input type="range" id="sound-volume" min="0" max="100" value="70"
+            style="width:100px; accent-color:var(--primary)">
+          <span id="sound-vol-text" style="font-size:0.82rem; font-weight:700; color:var(--primary); min-width:34px">70%</span>
+        </div>
+      </div>
+
+      <div id="lottery-warn" class="alert alert-warn" style="display:none; max-width:500px; margin:0 auto 24px;"></div>
+      <button class="btn btn-accent btn-xl" id="start-lottery-btn" onclick="startLottery()">
+        <i class="fas fa-random"></i> 席替えスタート！
+      </button>
+      <p style="margin-top:16px; font-size:0.85rem; color:var(--text-light)">
+        ※ プロジェクターで投影しながら行うと盛り上がります 🎉
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== PANEL 4: 結果・出力 ===== -->
+  <div class="panel" id="panel-4">
+    <div id="no-result-msg" class="card" style="text-align:center; padding:48px;">
+      <i class="fas fa-dice fa-3x" style="color:var(--border); margin-bottom:16px;"></i>
+      <p style="color:var(--text-light)">まだ抽選が完了していません。<br>「席替え抽選」タブで抽選を行ってください。</p>
+    </div>
+    <div id="result-content" style="display:none">
+      <!-- コントロール行1: タイトル + 視点切替 -->
+      <div class="result-controls">
+        <div class="result-title-edit">
+          <input type="text" id="result-class-label" placeholder="クラス名" style="max-width:160px">
+          <input type="text" id="result-date-label" placeholder="日付" style="max-width:140px">
+          <input type="text" id="result-title-label" value="座席表" style="max-width:120px">
+        </div>
+
+        <!-- 視点切替 -->
+        <div class="perspective-toggle">
+          <button id="persp-student-btn" class="active" onclick="setPerspective('student')">
+            🎒 生徒目線（後ろから）
+          </button>
+          <button id="persp-teacher-btn" onclick="setPerspective('teacher')">
+            👩‍🏫 教師目線（前から）
+          </button>
+        </div>
+
+        <!-- 言語切替 -->
+        <div class="display-mode-toggle">
+          <button id="mode-ja-btn" class="active" onclick="setDisplayMode('ja')">🇯🇵 日本語</button>
+          <button id="mode-en-btn" onclick="setDisplayMode('en')">🇬🇧 英語</button>
+          <button id="mode-both-btn" onclick="setDisplayMode('both')">両方</button>
+        </div>
+      </div>
+
+      <!-- コントロール行2: 出力ボタン -->
+      <div class="result-controls" style="margin-bottom:20px">
+        <button class="btn btn-success" onclick="downloadExcel()">
+          <i class="fas fa-file-excel"></i> Excelダウンロード（4シート）
+        </button>
+        <button class="btn btn-outline" onclick="printResult()">
+          <i class="fas fa-print"></i> 印刷
+        </button>
+        <button class="btn btn-accent" onclick="goToStep3ReRoll()">
+          <i class="fas fa-redo"></i> もう一度
+        </button>
+      </div>
+
+      <div class="card" id="result-card">
+        <!-- 視点バッジ -->
+        <div id="view-badge-student" class="view-badge student">
+          🎒 生徒目線（教室の後ろから見た配置）　教卓＝前方
+        </div>
+        <div id="view-badge-teacher" class="view-badge teacher" style="display:none">
+          👩‍🏫 教師目線（教卓側から見た配置）　生徒の左右が逆転
+        </div>
+        <div class="classroom-wrap">
+          <div class="classroom" id="result-classroom">
+            <div id="result-podium-top" class="podium-row">
+              <div id="result-class-header" style="text-align:center; margin-bottom:8px">
+                <span id="result-header-text" style="font-size:0.95rem; font-weight:700; color:var(--text-light)"></span>
+              </div>
+              <div class="podium" id="result-podium-label-top">📋 教卓（前方）</div>
+            </div>
+            <div class="direction-labels" id="result-dir-labels">
+              <span id="result-dir-left">← 窓側</span>
+              <span id="result-dir-right">廊下側 →</span>
+            </div>
+            <div id="result-grid" class="layout-grid"></div>
+            <div id="result-back-label" style="text-align:center; margin-top:10px; font-size:0.78rem; color:#8899bb;">↑ 後方</div>
+            <!-- 教師目線: 教卓は下に表示 -->
+            <div id="result-podium-bottom" class="podium-row" style="display:none; margin-top:18px; margin-bottom:0">
+              <div class="podium" style="background:linear-gradient(135deg,#b7791f,#f0a500);color:#fff;">📋 教卓（先生の位置）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 名簿ビュー -->
+      <div class="card">
+        <div class="card-title"><i class="fas fa-list"></i> 座席一覧（番号順）</div>
+        <div class="student-table-wrap">
+          <table class="student-table">
+            <thead>
+              <tr>
+                <th>出席番号</th>
+                <th>名前（日本語）</th>
+                <th>英語名</th>
+                <th>座席（行・列）</th>
+              </tr>
+            </thead>
+            <tbody id="result-list-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== LOTTERY OVERLAY ===== -->
+<div class="stars-bg" id="stars-bg"></div>
+<div id="lottery-overlay">
+  <!-- Sound toggle in overlay -->
+  <div class="sound-toggle-overlay" onclick="toggleSoundInOverlay()">
+    <i class="fas" id="overlay-sound-icon"></i>
+    <span id="overlay-sound-text"></span>
+  </div>
+
+  <div class="lottery-title">
+    🎲 席替え抽選中！
+    <div class="sub" id="lottery-subtitle">座席をランダムに割り当て中...</div>
+  </div>
+
+  <!-- グリッドを画面内にフィットさせるコンテナ -->
+  <div id="lottery-grid-container">
+    <div class="lottery-classroom" id="lottery-classroom-inner">
+      <div style="text-align:center; margin-bottom:14px;">
+        <div class="lottery-podium">📋 教卓（前方）</div>
+      </div>
+      <div id="lottery-grid" class="lottery-grid"></div>
+    </div>
+  </div>
+
+  <div class="lottery-progress">
+    <div class="lottery-progress-bar" id="lottery-progress-bar"></div>
+  </div>
+  <div class="lottery-status" id="lottery-status"></div>
+  <button class="btn btn-success btn-lg lottery-close-btn" id="lottery-close-btn" onclick="closeLotteryOverlay()">
+    <i class="fas fa-check-circle"></i> 結果を見る！
+  </button>
+</div>
+
+<!-- FLASH OVERLAY -->
+<div class="flash-overlay" id="flash-overlay"></div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- ===== 固定席 MODAL ===== -->
+<div class="fixed-modal-overlay" id="fixed-modal-overlay">
+  <div class="fixed-modal">
+    <h3><i class="fas fa-thumbtack"></i> 固定席の設定</h3>
+    <div class="seat-pos-label" id="fixed-modal-seat-label"></div>
+    <input type="hidden" id="fixed-modal-r">
+    <input type="hidden" id="fixed-modal-c">
+    <label style="margin-bottom:8px; display:block">この席に固定する生徒を選んでください</label>
+    <select id="fixed-student-select"></select>
+    <div class="fixed-modal-btns">
+      <button class="btn btn-outline" onclick="closeFixedModal()">
+        <i class="fas fa-times"></i> キャンセル
+      </button>
+      <button class="btn btn-accent" onclick="applyFixedSeat()" style="background:#e67e22">
+        <i class="fas fa-thumbtack"></i> 固定する
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==============================
+// STATE
+// ==============================
+let students = [];      // { num, name, nameEn, active }
+let seatLayout = [];    // 2D: null=empty, 0=available
+let rows = 6, cols = 6;
+let assignedSeats = null;
+let lotteryRunning = false;
+let displayMode = 'ja'; // 'ja' | 'en' | 'both'
+let perspective = 'student'; // 'student' | 'teacher'
+let audioCtx = null;
+// 固定席: key="r-c" → studentNum
+let fixedSeats = {};
+
+// Sound state
+function isSoundEnabled() { return document.getElementById('sound-enabled').checked; }
+function getSoundVolume() { return parseInt(document.getElementById('sound-volume').value) / 100; }
+
+// ==============================
+// INIT
+// ==============================
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  document.getElementById('class-date').value =
+    today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
+  initLayout();
+  renderStudentTable();
+  generateStars();
+  initColorPresets();
+
+  // Sound toggle label sync
+  document.getElementById('sound-enabled').addEventListener('change', function() {
+    document.getElementById('sound-label-text').textContent = this.checked ? 'ON' : 'OFF';
+    updateOverlaySoundUI();
+  });
+  document.getElementById('sound-volume').addEventListener('input', function() {
+    document.getElementById('sound-vol-text').textContent = this.value + '%';
+  });
+
+  // Result inputs sync
+  ['result-class-label','result-date-label','result-title-label'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateResultHeader);
+  });
+});
+
+// ==============================
+// PANEL NAVIGATION
+// ==============================
+function showPanel(n) {
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i+1 === n));
+  document.querySelectorAll('.step-btn').forEach((b,i) => b.classList.toggle('active', i+1 === n));
+}
+
+function goToStep2() {
+  const active = students.filter(s => s.active);
+  if (active.length === 0) { showToast('生徒を1名以上登録してください', 'error'); return; }
+  showPanel(2);
+  updateLayout();
+  updateLayoutStats();
+}
+
+function goToStep3() {
+  const active = students.filter(s => s.active);
+  const seats = countAvailableSeats();
+  if (active.length > seats) {
+    showToast(`座席数(${seats})が生徒数(${active.length})より少ないです`, 'error'); return;
+  }
+  showPanel(3);
+  updateLotteryInfo();
+}
+
+function goToStep3ReRoll() {
+  showPanel(3);
+  updateLotteryInfo();
+}
+
+function updateLotteryInfo() {
+  const active = students.filter(s => s.active);
+  const seats = countAvailableSeats();
+  const fixedCount = Object.keys(fixedSeats).length;
+  document.getElementById('lottery-info-chips').innerHTML = `
+    <div class="chip"><i class="fas fa-users"></i> 生徒 ${active.length}名</div>
+    <div class="chip"><i class="fas fa-th"></i> 有効座席 ${seats}席</div>
+    <div class="chip"><i class="fas fa-chair"></i> 空席 ${rows*cols - seats}席</div>
+    ${fixedCount > 0 ? `<div class="chip" style="background:#fff8f0;border-color:#e67e22;color:#a04000"><i class="fas fa-thumbtack"></i> 固定席 ${fixedCount}名</div>` : ''}
+    <div class="chip"><i class="fas fa-school"></i> ${document.getElementById('class-name').value || '未設定'}</div>
+  `;
+  const warn = document.getElementById('lottery-warn');
+  if (seats < active.length) {
+    warn.style.display = 'block';
+    warn.innerHTML = `⚠️ 座席数(${seats})が生徒数(${active.length})より少ないです。ステップ2で空席設定を見直してください。`;
+    document.getElementById('start-lottery-btn').disabled = true;
+  } else {
+    warn.style.display = 'none';
+    document.getElementById('start-lottery-btn').disabled = false;
+  }
+}
+
+function markStepDone(n) {
+  const btn = document.getElementById(`step-btn-${n}`);
+  if (btn) btn.classList.add('done');
+}
+
+// ==============================
+// STUDENT MANAGEMENT
+// ==============================
+function renderStudentTable() {
+  const tbody = document.getElementById('student-tbody');
+  if (students.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:20px">まだ生徒が登録されていません</td></tr>';
+    document.getElementById('student-count').textContent = '0名';
+    return;
+  }
+  tbody.innerHTML = students.map((s, i) => `
+    <tr class="${s.active ? '' : 'absent'}">
+      <td><strong>${s.num}</strong></td>
+      <td>${s.name}</td>
+      <td class="en-name-cell">${s.nameEn || '<span style="color:#ccc">—</span>'}</td>
+      <td>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;margin:0">
+          <input type="checkbox" ${s.active ? 'checked' : ''} onchange="toggleActive(${i})">
+          <span style="font-size:0.82rem">${s.active ? '参加' : '欠席'}</span>
+        </label>
+      </td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="removeStudent(${i})">
+          <i class="fas fa-times"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+  const activeCount = students.filter(s => s.active).length;
+  document.getElementById('student-count').textContent = `${activeCount}/${students.length}名`;
+}
+
+function addStudent() {
+  const numEl   = document.getElementById('add-num');
+  const rubyEl  = document.getElementById('add-name-ruby');
+  const nameEl  = document.getElementById('add-name');
+  const nameEnEl= document.getElementById('add-name-en');
+  const num      = parseInt(numEl.value);
+  const nameRuby = rubyEl  ? rubyEl.value.trim()  : '';
+  const name     = nameEl.value.trim();
+  const nameEn   = nameEnEl.value.trim();
+  if (!name) { showToast('名前（漢字）を入力してください', 'error'); return; }
+  if (isNaN(num) || num < 1) { showToast('出席番号を入力してください', 'error'); return; }
+  if (students.some(s => s.num === num)) {
+    showToast(`出席番号${num}は既に登録されています`, 'error'); return;
+  }
+  students.push({ num, name, nameRuby, nameEn, active: true });
+  students.sort((a, b) => a.num - b.num);
+  renderStudentTable();
+  numEl.value = ''; if(rubyEl) rubyEl.value = ''; nameEl.value = ''; nameEnEl.value = '';
+  nameEl.focus();
+  showToast(`${num}番 ${name} を追加しました`);
+}
+
+function removeStudent(i) { students.splice(i, 1); renderStudentTable(); }
+function toggleActive(i) { students[i].active = !students[i].active; renderStudentTable(); }
+function sortStudents() { students.sort((a,b)=>a.num-b.num); renderStudentTable(); showToast('出席番号順に並べ替えました'); }
+function clearAllStudents() {
+  if (students.length === 0) return;
+  if (!confirm('全生徒を削除しますか？')) return;
+  students = []; renderStudentTable();
+}
+
+// ひらがな・カタカナのみかチェック
+function isYomigana(str) {
+  return /^[\u3040-\u309f\u30a0-\u30ff\s　]+$/.test(str.trim());
+}
+
+function parseBulkInput() {
+  const text = document.getElementById('bulk-input').value.trim();
+  if (!text) { showToast('テキストを貼り付けてください', 'error'); return; }
+  const lines = text.split('\n');
+  let added = 0, skipped = 0;
+
+  lines.forEach(line => {
+    line = line.trim();
+    if (!line) return;
+
+    // ── STEP1: タブ・カンマ区切りで分割（優先） ──
+    let parts = line.split(/[\t,]+/).map(p => p.trim()).filter(Boolean);
+
+    // ── STEP2: タブ・カンマがない場合はスペース区切りで分割 ──
+    if (parts.length < 2) {
+      const m = line.match(/^(\d+)\s+(.+)$/);
+      if (!m) { skipped++; return; }
+      // 残り部分をスペースで分割して解析
+      const rest = m[2].trim();
+      const tokens = rest.split(/\s+/);
+      // ひらがなだけのトークンと漢字・英字のトークンを分離
+      // 例: "のりひさ るか 則久 瑠花" → ruby="のりひさ るか" kanji="則久 瑠花"
+      let rubyTokens = [], kanjiTokens = [], enTokens = [];
+      let seenKanji = false;
+      let seenEn = false;
+      for (const tok of tokens) {
+        if (!seenKanji && !seenEn && isYomigana(tok)) {
+          rubyTokens.push(tok);
+        } else if (!seenEn && /^[A-Za-z]/.test(tok)) {
+          seenEn = true;
+          enTokens.push(tok);
+        } else if (/^[A-Za-z]/.test(tok)) {
+          enTokens.push(tok);
+        } else {
+          seenKanji = true;
+          kanjiTokens.push(tok);
+        }
+      }
+      const ruby  = rubyTokens.join(' ');
+      const kanji = kanjiTokens.join(' ');
+      const en    = enTokens.join(' ');
+      const nameJP = kanji || ruby;
+      if (!nameJP) { skipped++; return; }
+      const num = parseInt(m[1]);
+      if (isNaN(num) || num < 1 || students.some(s => s.num === num)) { skipped++; return; }
+      students.push({ num, name: nameJP, nameRuby: kanji ? ruby : '', nameEn: en, active: true });
+      added++;
+      return;
+    }
+
+    // ── STEP3: タブ・カンマ区切りの列解釈 ──
+    const num = parseInt(parts[0]);
+    if (isNaN(num) || num < 1) { skipped++; return; }
+    if (students.some(s => s.num === num)) { skipped++; return; }
+
+    let nameRuby = '', nameJP = '', nameEN = '';
+
+    if (parts.length === 2) {
+      // [番号, テキスト] → テキスト内を解析
+      const raw = parts[1];
+      // 末尾の英字部分を分離
+      const enMatch = raw.match(/([A-Za-z].*)$/);
+      const jpPart  = enMatch ? raw.slice(0, raw.indexOf(enMatch[0])).trim() : raw.trim();
+      nameEN = enMatch ? enMatch[0].trim() : '';
+      // jpPartがひらがなのみ → nameRubyだけ（漢字なし）
+      if (isYomigana(jpPart)) {
+        nameRuby = jpPart; nameJP = jpPart;
+      } else {
+        nameJP = jpPart;
+      }
+    } else if (parts.length === 3) {
+      if (isYomigana(parts[1])) {
+        nameRuby = parts[1];
+        if (/^[A-Za-z]/.test(parts[2])) { nameEN = parts[2]; nameJP = nameRuby; }
+        else { nameJP = parts[2]; }
+      } else {
+        nameJP = parts[1];
+        nameEN = parts[2];
+      }
+    } else {
+      // 4列以上
+      if (isYomigana(parts[1])) {
+        nameRuby = parts[1];
+        nameJP   = parts[2] || '';
+        nameEN   = parts.slice(3).join(' ');
+      } else {
+        nameJP = parts[1];
+        nameEN = parts.slice(2).join(' ');
+      }
+    }
+
+    if (!nameJP && nameRuby) nameJP = nameRuby;
+    if (!nameJP) { skipped++; return; }
+
+    students.push({ num, name: nameJP, nameRuby, nameEn: nameEN, active: true });
+    added++;
+  });
+
+  students.sort((a, b) => a.num - b.num);
+  renderStudentTable();
+  document.getElementById('bulk-input').value = '';
+  showToast(`${added}名を読み込みました${skipped > 0 ? `（${skipped}行スキップ）` : ''}`, added > 0 ? 'success' : 'error');
+}
+
+function loadSampleData() {
+  if (students.length > 0 && !confirm('既存データを上書きしますか？')) return;
+  // [漢字名, 読み仮名, 英語名]
+  const sampleData = [
+    ['山田 太郎','やまだ たろう','Taro Yamada'],
+    ['佐藤 花子','さとう はなこ','Hanako Sato'],
+    ['鈴木 一郎','すずき いちろう','Ichiro Suzuki'],
+    ['田中 美咲','たなか みさき','Misaki Tanaka'],
+    ['伊藤 健太','いとう けんた','Kenta Ito'],
+    ['渡辺 さくら','わたなべ さくら','Sakura Watanabe'],
+    ['中村 拓也','なかむら たくや','Takuya Nakamura'],
+    ['小林 あおい','こばやし あおい','Aoi Kobayashi'],
+    ['加藤 勇','かとう いさむ','Isamu Kato'],
+    ['吉田 ひなた','よしだ ひなた','Hinata Yoshida'],
+    ['山本 大輝','やまもと だいき','Daiki Yamamoto'],
+    ['松本 ゆい','まつもと ゆい','Yui Matsumoto'],
+    ['井上 翔太','いのうえ しょうた','Shota Inoue'],
+    ['木村 えみ','きむら えみ','Emi Kimura'],
+    ['林 蒼太','はやし そうた','Sota Hayashi'],
+    ['清水 さな','しみず さな','Sana Shimizu'],
+    ['山崎 悠','やまざき ゆう','Yu Yamazaki'],
+    ['森 みく','もり みく','Miku Mori'],
+    ['池田 遼','いけだ りょう','Ryo Ikeda'],
+    ['橋本 れな','はしもと れな','Rena Hashimoto'],
+    ['石川 颯','いしかわ はやて','Hayate Ishikawa'],
+    ['長谷川 めい','はせがわ めい','Mei Hasegawa'],
+    ['岡田 大和','おかだ やまと','Yamato Okada'],
+    ['前田 つばさ','まえだ つばさ','Tsubasa Maeda'],
+    ['三浦 はると','みうら はると','Haruto Miura'],
+    ['岡本 りの','おかもと りの','Rino Okamoto'],
+    ['小川 陸','おがわ りく','Riku Ogawa'],
+    ['藤田 ことは','ふじた ことは','Kotoha Fujita'],
+    ['後藤 蓮','ごとう れん','Ren Goto'],
+    ['高橋 あかり','たかはし あかり','Akari Takahashi'],
+    ['村上 湊','むらかみ みなと','Minato Murakami'],
+    ['遠藤 りさ','えんどう りさ','Risa Endo'],
+    ['青木 聖','あおき せい','Sei Aoki'],
+    ['柴田 まいか','しばた まいか','Maika Shibata'],
+    ['坂本 海斗','さかもと かいと','Kaito Sakamoto'],
+    ['藤井 日菜','ふじい ひな','Hina Fujii'],
+  ];
+  students = sampleData.map(([name, nameRuby, nameEn], i) => ({ num: i+1, name, nameRuby, nameEn, active: true }));
+  renderStudentTable();
+  showToast('サンプルデータを読み込みました（36名・読み仮名・英語名あり）', 'success');
+}
+
+// ==============================
+// LAYOUT
+// ==============================
+function initLayout() {
+  rows = parseInt(document.getElementById('rows').value) || 6;
+  cols = parseInt(document.getElementById('cols').value) || 6;
+  seatLayout = Array.from({length: rows}, () => Array(cols).fill(0));
+}
+
+function updateLayout() {
+  rows = Math.max(1, Math.min(12, parseInt(document.getElementById('rows').value) || 6));
+  cols = Math.max(1, Math.min(12, parseInt(document.getElementById('cols').value) || 6));
+  const newLayout = Array.from({length: rows}, (_, r) =>
+    Array.from({length: cols}, (_, c) => seatLayout[r] && seatLayout[r][c] === null ? null : 0)
+  );
+  seatLayout = newLayout;
+  cleanupFixedSeats();
+  renderLayoutGrid();
+  updateLayoutStats();
+}
+
+function renderLayoutGrid() {
+  const grid = document.getElementById('layout-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, var(--desk-width))`;
+  let seatNum = 0;
+  grid.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      seatNum++;
+      const key = `${r}-${c}`;
+      const fixedStudentNum = fixedSeats[key];
+      const fixedStudent = fixedStudentNum != null
+        ? students.find(s => s.num === fixedStudentNum) : null;
+      const isEmpty = seatLayout[r][c] === null;
+
+      const cell = document.createElement('div');
+      let cls = 'seat-cell';
+      if (isEmpty) cls += ' empty';
+      else if (fixedStudent) cls += ' fixed';
+      cell.className = cls;
+
+      if (isEmpty) {
+        cell.innerHTML = `<span style="font-size:1.1rem;opacity:0.4">✕</span><span style="font-size:0.7rem;color:#b0b8cc">空席</span>`;
+      } else if (fixedStudent) {
+        cell.innerHTML = `
+          <span class="fixed-badge">📌固定</span>
+          <i class="fas fa-user" style="font-size:0.85rem;color:#e67e22;margin-bottom:2px"></i>
+          <span class="fixed-name">${fixedStudent.name}</span>
+          <span style="font-size:0.65rem;color:#a04000">No.${fixedStudent.num}</span>`;
+      } else {
+        cell.innerHTML = `<i class="fas fa-chair" style="font-size:1rem;margin-bottom:3px"></i><span class="seat-num">席${seatNum}</span>`;
+      }
+
+      // 左クリック: 空席切替（固定されていれば解除してから）
+      cell.onclick = () => {
+        if (fixedSeats[key] != null) {
+          // 固定席の場合は空席切替せず無視（右クリックで操作）
+          showToast('固定席は右クリックで変更・解除できます', '');
+          return;
+        }
+        toggleSeatEmpty(r, c);
+      };
+
+      // 右クリック / 長押し: 固定席設定モーダル
+      cell.oncontextmenu = (e) => {
+        e.preventDefault();
+        if (isEmpty) { showToast('空席には固定設定できません', ''); return; }
+        openFixedModal(r, c, seatNum);
+      };
+
+      // スマホ長押し対応
+      let longPressTimer;
+      cell.addEventListener('touchstart', () => {
+        longPressTimer = setTimeout(() => {
+          if (isEmpty) { showToast('空席には固定設定できません', ''); return; }
+          openFixedModal(r, c, seatNum);
+        }, 600);
+      }, { passive: true });
+      cell.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
+      cell.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+
+      grid.appendChild(cell);
+    }
+  }
+  renderFixedList();
+}
+
+function toggleSeatEmpty(r, c) {
+  const key = `${r}-${c}`;
+  if (seatLayout[r][c] === null) {
+    seatLayout[r][c] = 0;
+  } else {
+    // 空席にする場合は固定も解除
+    delete fixedSeats[key];
+    seatLayout[r][c] = null;
+  }
+  renderLayoutGrid(); updateLayoutStats();
+}
+
+// ==============================
+// 固定席 MODAL
+// ==============================
+function openFixedModal(r, c, seatNum) {
+  const key = `${r}-${c}`;
+  const modal = document.getElementById('fixed-modal-overlay');
+  const sel = document.getElementById('fixed-student-select');
+  document.getElementById('fixed-modal-seat-label').textContent =
+    `席${seatNum}（前から${r+1}行目・左から${c+1}列目）`;
+  document.getElementById('fixed-modal-r').value = r;
+  document.getElementById('fixed-modal-c').value = c;
+
+  // 選択肢: 参加中の生徒で、他の固定席に使われていないもの
+  const usedNums = Object.entries(fixedSeats)
+    .filter(([k]) => k !== key)
+    .map(([, num]) => num);
+  const available = students.filter(s => s.active && !usedNums.includes(s.num));
+
+  sel.innerHTML = '<option value="">（固定なし・ランダム）</option>' +
+    available.map(s => `<option value="${s.num}"${fixedSeats[key]===s.num?' selected':''}>${s.num}番　${s.name}</option>`).join('');
+
+  modal.classList.add('open');
+}
+
+function applyFixedSeat() {
+  const r = parseInt(document.getElementById('fixed-modal-r').value);
+  const c = parseInt(document.getElementById('fixed-modal-c').value);
+  const key = `${r}-${c}`;
+  const val = document.getElementById('fixed-student-select').value;
+  if (val === '') {
+    delete fixedSeats[key];
+    showToast('固定を解除しました');
+  } else {
+    fixedSeats[key] = parseInt(val);
+    const s = students.find(st => st.num === parseInt(val));
+    showToast(`${s.name} を固定席に設定しました`, 'success');
+  }
+  closeFixedModal();
+  renderLayoutGrid();
+  updateLayoutStats();
+}
+
+function closeFixedModal() {
+  document.getElementById('fixed-modal-overlay').classList.remove('open');
+}
+
+function clearAllFixed() {
+  if (Object.keys(fixedSeats).length === 0) { showToast('固定席はありません'); return; }
+  fixedSeats = {};
+  renderLayoutGrid();
+  updateLayoutStats();
+  showToast('固定席をすべて解除しました');
+}
+
+function renderFixedList() {
+  const container = document.getElementById('fixed-list');
+  const entries = Object.entries(fixedSeats);
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-light);font-size:0.82rem">まだ固定席はありません</div>';
+    return;
+  }
+  container.innerHTML = entries.map(([key, num]) => {
+    const [r, c] = key.split('-').map(Number);
+    const s = students.find(st => st.num === num);
+    const name = s ? `${s.num}番 ${s.name}` : `No.${num}`;
+    return `<div class="fixed-list-item">
+      <span class="fix-info">📌 ${name}</span>
+      <span class="fix-seat">前${r+1}行・左${c+1}列</span>
+      <button class="btn btn-danger btn-sm" onclick="removeFixedSeat('${key}')" title="解除">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function removeFixedSeat(key) {
+  delete fixedSeats[key];
+  renderLayoutGrid();
+  updateLayoutStats();
+  showToast('固定席を解除しました');
+}
+
+function updateLayoutStats() {
+  const total = rows * cols;
+  const empty = seatLayout.flat().filter(s => s === null).length;
+  const available = total - empty;
+  const active = students.filter(s => s.active).length;
+  const fixedCount = Object.keys(fixedSeats).length;
+  document.getElementById('layout-stats').innerHTML = `
+    全席数： <strong>${total}</strong><br>
+    有効座席： <strong style="color:var(--primary)">${available}</strong><br>
+    空席数： <strong style="color:var(--danger)">${empty}</strong><br>
+    参加生徒： <strong style="color:var(--success)">${active}名</strong><br>
+    固定席： <strong style="color:#e67e22">${fixedCount}席</strong>
+    ${available < active ? `<br><span style="color:var(--danger)">⚠️ 座席が${active-available}席不足</span>` : ''}
+    ${available > active ? `<br><span style="color:var(--text-light)">（余り ${available-active}席）</span>` : ''}
+  `;
+}
+
+function countAvailableSeats() { return seatLayout.flat().filter(s => s !== null).length; }
+
+function resetEmptySeats() {
+  seatLayout = Array.from({length: rows}, () => Array(cols).fill(0));
+  // 空席でなくなった固定席はそのまま有効
+  renderLayoutGrid(); updateLayoutStats(); showToast('空席をリセットしました');
+}
+
+function cleanupFixedSeats() {
+  // 範囲外・空席になった固定席を削除
+  for (const key of Object.keys(fixedSeats)) {
+    const [r, c] = key.split('-').map(Number);
+    if (r >= rows || c >= cols || seatLayout[r][c] === null) {
+      delete fixedSeats[key];
+    }
+  }
+}
+
+function autoFillEmptySeats() {
+  const active = students.filter(s => s.active).length;
+  const total = rows * cols;
+  if (active >= total) { resetEmptySeats(); return; }
+  seatLayout = Array.from({length: rows}, () => Array(cols).fill(0));
+  let toEmpty = total - active;
+  outer: for (let r = rows-1; r >= 0; r--) {
+    for (let c = cols-1; c >= 0; c--) {
+      if (toEmpty <= 0) break outer;
+      seatLayout[r][c] = null; toEmpty--;
+    }
+  }
+  renderLayoutGrid(); updateLayoutStats();
+  showToast(`空席を自動設定しました（${total-active}席）`, 'success');
+}
+
+// ==============================
+// 🎨 SEAT COLOR
+// ==============================
+const COLOR_PRESETS = [
+  { border: '#7396c8', bg: '#ffffff', text: '#2c3e50', label: 'デフォルト（青）' },
+  { border: '#27ae60', bg: '#f0fff4', text: '#145a32', label: 'グリーン' },
+  { border: '#e67e22', bg: '#fff8f0', text: '#784212', label: 'オレンジ' },
+  { border: '#e74c3c', bg: '#fff5f5', text: '#7b241c', label: 'レッド' },
+  { border: '#8e44ad', bg: '#faf0ff', text: '#4a235a', label: 'パープル' },
+  { border: '#1abc9c', bg: '#f0fffc', text: '#0e6655', label: 'ティール' },
+  { border: '#2c3e50', bg: '#f4f6f8', text: '#1a252f', label: 'ダーク' },
+  { border: '#f39c12', bg: '#fffdf0', text: '#7d6608', label: 'イエロー' },
+  { border: '#e91e8c', bg: '#fff0f8', text: '#7b0d4e', label: 'ピンク' },
+];
+
+function initColorPresets() {
+  const container = document.getElementById('color-presets');
+  COLOR_PRESETS.forEach((p, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'preset-btn' + (i === 0 ? ' selected' : '');
+    btn.title = p.label;
+    btn.style.background = p.bg;
+    btn.style.border = `3px solid ${p.border}`;
+    btn.dataset.index = i;
+    btn.onclick = () => applyPreset(i);
+    container.appendChild(btn);
+  });
+}
+
+function applyPreset(i) {
+  const p = COLOR_PRESETS[i];
+  document.getElementById('color-border').value = p.border;
+  document.getElementById('color-bg').value = p.bg;
+  document.getElementById('color-text').value = p.text;
+  applySeatColor();
+  document.querySelectorAll('.preset-btn').forEach((b, j) => b.classList.toggle('selected', j === i));
+}
+
+function applySeatColor() {
+  const border = document.getElementById('color-border').value;
+  const bg = document.getElementById('color-bg').value;
+  const text = document.getElementById('color-text').value;
+  document.documentElement.style.setProperty('--seat-border', border);
+  document.documentElement.style.setProperty('--seat-bg', bg);
+  document.documentElement.style.setProperty('--seat-text', text);
+}
+
+function resetSeatColor() {
+  applyPreset(0);
+  showToast('デフォルト色に戻しました');
+}
+
+// ==============================
+// 🎵 WEB AUDIO SOUND ENGINE
+// ==============================
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+function playTone(freq, duration, type = 'sine', vol = 0.3) {
+  if (!isSoundEnabled()) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol * getSoundVolume(), ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function playRollSound() {
+  // ランダムな短い音を鳴らす（ロール中）
+  const freqs = [261, 293, 329, 349, 392, 440, 494, 523];
+  const f = freqs[Math.floor(Math.random() * freqs.length)];
+  playTone(f, 0.07, 'square', 0.08);
+}
+
+function playConfirmSound(index, total) {
+  // 確定音：index/total に応じて音程が上がる演出
+  const baseFreq = 220;
+  const progress = index / total;
+  const freq = baseFreq + progress * 660;
+  playTone(freq, 0.12, 'sine', 0.18);
+  // 少し遅れて倍音
+  setTimeout(() => playTone(freq * 1.5, 0.08, 'sine', 0.08), 40);
+}
+
+function playFanfare() {
+  if (!isSoundEnabled()) return;
+  // ファンファーレ！
+  const melody = [
+    { f: 523, d: 0.12 },
+    { f: 659, d: 0.12 },
+    { f: 784, d: 0.12 },
+    { f: 1046, d: 0.35 },
+    { f: 784, d: 0.12 },
+    { f: 1046, d: 0.5 },
+  ];
+  let t = 0;
+  melody.forEach(({ f, d }) => {
+    setTimeout(() => playTone(f, d, 'sine', 0.28), t * 1000);
+    t += d * 0.85;
+  });
+}
+
+function playCountdownBeep(n) {
+  // カウントダウン的なビープ
+  const freqs = [400, 500, 600];
+  playTone(freqs[n % 3] || 400, 0.15, 'sine', 0.15);
+}
+
+function playStartSound() {
+  // スタートの「ドン！」
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioCtx();
+  // ドラムロール風ノイズ
+  try {
+    const bufferSize = ctx.sampleRate * 0.15;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4 * getSoundVolume(), ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 200;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+  } catch(e) {}
+  // 続いてピッチ上昇
+  setTimeout(() => playTone(200, 0.3, 'sawtooth', 0.15), 50);
+  setTimeout(() => playTone(400, 0.3, 'sawtooth', 0.12), 200);
+  setTimeout(() => playTone(600, 0.2, 'sine', 0.1), 380);
+}
+
+// ==============================
+// SOUND UI IN OVERLAY
+// ==============================
+function updateOverlaySoundUI() {
+  const enabled = isSoundEnabled();
+  document.getElementById('overlay-sound-icon').className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+  document.getElementById('overlay-sound-text').textContent = enabled ? '音あり' : '音なし';
+}
+
+function toggleSoundInOverlay() {
+  const cb = document.getElementById('sound-enabled');
+  cb.checked = !cb.checked;
+  document.getElementById('sound-label-text').textContent = cb.checked ? 'ON' : 'OFF';
+  updateOverlaySoundUI();
+}
+
+// ==============================
+// LOTTERY
+// ==============================
+let lotteryDesks = [];
+let rollSoundTimer = null;
+
+function startLottery() {
+  if (lotteryRunning) return;
+  const active = students.filter(s => s.active);
+  if (active.length === 0) { showToast('参加する生徒がいません', 'error'); return; }
+
+  // 固定席の検証: 固定生徒が参加中か確認
+  for (const [key, num] of Object.entries(fixedSeats)) {
+    const s = students.find(st => st.num === num && st.active);
+    if (!s) {
+      showToast(`固定席の生徒（No.${num}）が参加リストにいません。固定席を見直してください`, 'error');
+      return;
+    }
+  }
+
+  // 有効座席リスト（空席以外）
+  const allSeats = [];
+  seatLayout.forEach((row, r) => row.forEach((cell, c) => { if (cell !== null) allSeats.push({r, c}); }));
+  if (allSeats.length < active.length) { showToast('座席が足りません', 'error'); return; }
+
+  lotteryRunning = true;
+  assignedSeats = null;
+
+  // ── 固定席を先にresultに入れる ──
+  const result = {};
+  const fixedStudentNums = new Set();
+  const fixedSeatKeys = new Set();
+
+  for (const [key, num] of Object.entries(fixedSeats)) {
+    // 座席が有効か確認
+    const [fr, fc] = key.split('-').map(Number);
+    if (seatLayout[fr][fc] === null) continue; // 空席になってたら無視
+    const s = students.find(st => st.num === num && st.active);
+    if (!s) continue;
+    result[key] = s;
+    fixedStudentNums.add(num);
+    fixedSeatKeys.add(key);
+  }
+
+  // ── 残りの生徒・座席でランダム割り当て ──
+  const freeStudents = active.filter(s => !fixedStudentNums.has(s.num));
+  const freeSeats = allSeats.filter(({r, c}) => !fixedSeatKeys.has(`${r}-${c}`));
+
+  const shuffled = shuffleArray([...freeStudents]);
+  shuffled.forEach((student, i) => {
+    if (i < freeSeats.length) {
+      result[`${freeSeats[i].r}-${freeSeats[i].c}`] = student;
+    }
+  });
+
+  buildLotteryGrid();
+
+  document.getElementById('stars-bg').classList.add('open');
+  document.getElementById('lottery-overlay').classList.add('open');
+  document.getElementById('lottery-status').textContent = '🎲 ランダムに割り当て中...';
+  document.getElementById('lottery-subtitle').textContent = '誰がどこの席に!?';
+  document.getElementById('lottery-close-btn').style.display = 'none';
+  document.getElementById('lottery-progress-bar').style.width = '0%';
+  updateOverlaySoundUI();
+
+  // スタート音
+  playStartSound();
+
+  runLotteryAnimation(result, allSeats, fixedSeatKeys);
+}
+
+function buildLotteryGrid() {
+  const grid = document.getElementById('lottery-grid');
+  grid.innerHTML = '';
+  lotteryDesks = [];
+
+  // 横長の机サイズ・統一gap
+  const deskW = 120, deskH = 68, gap = 8;
+
+  // 全列統一gapのみ（通路なし）
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${deskW}px)`;
+  grid.style.gap = `${gap}px`;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const key = `${r}-${c}`;
+      const isEmpty = seatLayout[r][c] === null;
+      const isFixed = !isEmpty && fixedSeats[key] != null;
+      const desk = document.createElement('div');
+      let cls = 'lottery-desk';
+      if (isEmpty) cls += ' empty-desk';
+      desk.className = cls;
+      desk.style.width = deskW + 'px';
+      desk.style.height = deskH + 'px';
+      desk.dataset.row = r; desk.dataset.col = c;
+      if (!isEmpty) {
+        desk.innerHTML = `<div class="roll-num">?</div><div class="roll-name">---</div>`;
+      }
+      grid.appendChild(desk);
+      lotteryDesks.push({ el: desk, r, c, isEmpty, isFixed });
+    }
+  }
+
+  // グリッド全体を画面に収まるようスケール調整
+  scaleLotteryToFit(deskW, deskH, gap);
+}
+
+function scaleLotteryToFit(deskW, deskH, gap) {
+  const classroom = document.getElementById('lottery-classroom-inner');
+  const container = document.getElementById('lottery-grid-container');
+  const overlay   = document.getElementById('lottery-overlay');
+
+  // いったんscaleをリセットして実際のサイズを測定
+  classroom.style.transform = 'scale(1)';
+  container.style.height = 'auto';
+  container.style.flex   = '1';
+  container.style.flexShrink = '1';
+
+  // 非同期で実測（requestAnimationFrame で描画後に取得）
+  requestAnimationFrame(() => {
+    // オーバーレイ全体の高さ・幅
+    const overlayW = overlay.offsetWidth;
+    const overlayH = overlay.offsetHeight;
+
+    // classroom の実際のサイズ（scale=1 時）
+    const classW = classroom.offsetWidth;
+    const classH = classroom.offsetHeight;
+
+    // コンテナが使える領域（オーバーレイ - classroom以外の要素）
+    // classroom以外の要素（タイトル・プログレス・ステータス・ボタン）の高さを合計
+    let othersH = 0;
+    overlay.querySelectorAll(':scope > *').forEach(el => {
+      if (el !== container && el.id !== 'flash-overlay') {
+        othersH += el.offsetHeight + parseInt(getComputedStyle(el).marginTop || 0) + parseInt(getComputedStyle(el).marginBottom || 0);
+      }
+    });
+    // オーバーレイのpadding分
+    const overlayStyle = getComputedStyle(overlay);
+    const padV = parseFloat(overlayStyle.paddingTop) + parseFloat(overlayStyle.paddingBottom);
+    const padH = parseFloat(overlayStyle.paddingLeft) + parseFloat(overlayStyle.paddingRight);
+
+    const availW = overlayW - padH - 4;
+    const availH = overlayH - othersH - padV - 8;
+
+    const scaleX = availW / classW;
+    const scaleY = availH / classH;
+    // 余白をほぼゼロにするため 0.97 係数をかける（ギリギリまで拡大）
+    const scale  = Math.min(scaleX, scaleY, 3.0) * 0.97;
+
+    classroom.style.transform       = `scale(${scale})`;
+    classroom.style.transformOrigin = 'center center';
+
+    // コンテナ高さを scaled サイズに合わせる
+    container.style.height    = (classH * scale) + 'px';
+    container.style.flex      = 'none';
+    container.style.flexShrink = '0';
+  });
+}
+
+function runLotteryAnimation(result, availableSeats, fixedSeatKeys) {
+  const activeNames = students.filter(s => s.active).map(s => s.name);
+  const rollDuration = 3000 + Math.random() * 2000;
+  const startTime = Date.now();
+
+  // 固定席も含めて全有効席をロール対象にする
+  const rollingDesks = lotteryDesks.filter(d => !d.isEmpty);
+  rollingDesks.forEach(d => {
+    d.el.classList.remove('confirmed'); // 固定席の初期confirmed状態を解除してロール
+    d.el.classList.add('rolling');
+  });
+
+  // ロールテキスト更新（固定席も含めてランダム名前が流れる）
+  const rollTimer = setInterval(() => {
+    rollingDesks.forEach(d => {
+      const rand = activeNames[Math.floor(Math.random() * activeNames.length)];
+      d.el.querySelector('.roll-name').textContent = rand;
+      d.el.querySelector('.roll-num').textContent = '?';
+    });
+  }, 80);
+
+  // ロール効果音（断続的に鳴らす）
+  rollSoundTimer = setInterval(() => playRollSound(), 90);
+
+  // プログレスバー
+  const progTimer = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(93, (elapsed / rollDuration) * 90);
+    document.getElementById('lottery-progress-bar').style.width = pct + '%';
+  }, 100);
+
+  // カウントダウン音（残り1秒前後）
+  setTimeout(() => playCountdownBeep(2), rollDuration - 800);
+  setTimeout(() => playCountdownBeep(1), rollDuration - 450);
+  setTimeout(() => playCountdownBeep(0), rollDuration - 100);
+
+  setTimeout(() => {
+    clearInterval(rollTimer);
+    clearInterval(progTimer);
+    clearInterval(rollSoundTimer);
+    rollSoundTimer = null;
+
+    confirmSeatsSequentially(result, availableSeats, () => {
+      document.getElementById('lottery-progress-bar').style.width = '100%';
+      document.getElementById('lottery-status').textContent = '✨ 全員の座席が確定しました！';
+      document.getElementById('lottery-subtitle').textContent = '席替え完了！🎊';
+      document.getElementById('lottery-close-btn').style.display = 'inline-flex';
+
+      triggerConfetti();
+      flashScreen();
+      playFanfare();
+
+      assignedSeats = result;
+      lotteryRunning = false;
+      markStepDone(3);
+    });
+  }, rollDuration);
+}
+
+function confirmSeatsSequentially(result, availableSeats, onDone) {
+  if (availableSeats.length === 0) { onDone(); return; }
+  // 固定席も含めて全席をシャッフルして順次確定（固定席も同じ演出で止まる）
+  const shuffledSeats = shuffleArray([...availableSeats]);
+  let confirmed = 0;
+  const total = shuffledSeats.length;
+
+  const confirmNext = (i) => {
+    if (i >= shuffledSeats.length) { onDone(); return; }
+    const seat = shuffledSeats[i];
+    const key = `${seat.r}-${seat.c}`;
+    const student = result[key];
+    const deskObj = lotteryDesks.find(d => d.r === seat.r && d.c === seat.c);
+    if (!deskObj) { confirmNext(i+1); return; }
+
+    const el = deskObj.el;
+    el.classList.remove('rolling');
+    el.classList.add('confirmed', 'just-confirmed');
+    if (student) {
+      el.querySelector('.roll-name').textContent = student.name;
+      el.querySelector('.roll-num').textContent = `No.${student.num}`;
+    } else {
+      el.querySelector('.roll-name').textContent = '空席';
+      el.querySelector('.roll-num').textContent = '';
+    }
+    setTimeout(() => el.classList.remove('just-confirmed'), 600);
+    confirmed++;
+    document.getElementById('lottery-status').textContent = `✨ ${confirmed} / ${total} 席確定...`;
+
+    // 確定音
+    playConfirmSound(confirmed, total);
+
+    const delay = Math.max(25, 160 - i * 2);
+    setTimeout(() => confirmNext(i+1), delay);
+  };
+  confirmNext(0);
+}
+
+function closeLotteryOverlay() {
+  clearInterval(rollSoundTimer);
+  document.getElementById('lottery-overlay').classList.remove('open');
+  document.getElementById('stars-bg').classList.remove('open');
+  if (assignedSeats) {
+    buildResultView();
+    showPanel(4);
+    markStepDone(3);
+    markStepDone(4);
+  }
+}
+
+// ==============================
+// PERSPECTIVE (生徒目線 / 教師目線)
+// ==============================
+function setPerspective(p) {
+  perspective = p;
+  const isTeacher = (p === 'teacher');
+
+  document.getElementById('persp-student-btn').classList.toggle('active', !isTeacher);
+  document.getElementById('persp-teacher-btn').classList.toggle('active', isTeacher);
+
+  // バッジ切替
+  document.getElementById('view-badge-student').style.display = isTeacher ? 'none' : 'inline-flex';
+  document.getElementById('view-badge-teacher').style.display = isTeacher ? 'inline-flex' : 'none';
+
+  // 教卓の位置切替
+  document.getElementById('result-podium-top').style.display    = isTeacher ? 'none' : 'block';
+  document.getElementById('result-podium-bottom').style.display = isTeacher ? 'block' : 'none';
+
+  // 後方ラベル
+  document.getElementById('result-back-label').style.display = isTeacher ? 'none' : 'block';
+
+  // 方向ラベル（教師目線では左右反転）
+  document.getElementById('result-dir-left').textContent  = isTeacher ? '← 廊下側' : '← 窓側';
+  document.getElementById('result-dir-right').textContent = isTeacher ? '窓側 →'   : '廊下側 →';
+
+  if (assignedSeats) buildResultGrid();
+}
+
+// ==============================
+// DISPLAY MODE (JA / EN / BOTH)
+// ==============================
+function setDisplayMode(mode) {
+  displayMode = mode;
+  document.getElementById('mode-ja-btn').classList.toggle('active', mode === 'ja');
+  document.getElementById('mode-en-btn').classList.toggle('active', mode === 'en');
+  document.getElementById('mode-both-btn').classList.toggle('active', mode === 'both');
+  if (assignedSeats) buildResultGrid();
+}
+
+function getDisplayName(student) {
+  if (!student) return null;
+  const hasEn = student.nameEn && student.nameEn.trim() !== '';
+  if (displayMode === 'en' && hasEn) return { main: student.nameEn, sub: null };
+  if (displayMode === 'both' && hasEn) return { main: student.name, sub: student.nameEn };
+  return { main: student.name, sub: null };
+}
+
+// ==============================
+// RESULT VIEW
+// ==============================
+function buildResultView() {
+  document.getElementById('no-result-msg').style.display = 'none';
+  document.getElementById('result-content').style.display = 'block';
+  document.getElementById('result-class-label').value = document.getElementById('class-name').value;
+  document.getElementById('result-date-label').value = document.getElementById('class-date').value;
+  updateResultHeader();
+  buildResultGrid();
+  buildResultList();
+}
+
+function buildResultGrid() {
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+
+  // 全列統一gap（通路なし）
+  grid.style.gridTemplateColumns = `repeat(${cols}, var(--desk-width))`;
+  grid.style.gap = '10px';
+
+  const isTeacher = (perspective === 'teacher');
+  // 教師目線: 行を逆順（後ろが上→前が上）・列を逆順（左右反転）
+  const rowOrder = isTeacher
+    ? Array.from({length: rows}, (_,i) => rows - 1 - i)
+    : Array.from({length: rows}, (_,i) => i);
+  const colOrder = isTeacher
+    ? Array.from({length: cols}, (_,i) => cols - 1 - i)
+    : Array.from({length: cols}, (_,i) => i);
+
+  for (const r of rowOrder) {
+    for (const c of colOrder) {
+      const cell = document.createElement('div');
+      if (seatLayout[r][c] === null) {
+        cell.className = 'result-seat empty-seat';
+        cell.innerHTML = '<span style="font-size:0.7rem;opacity:0.4">空席</span>';
+      } else {
+        cell.className = 'result-seat';
+        const student = assignedSeats[`${r}-${c}`];
+        if (student) {
+          const disp = getDisplayName(student);
+          const hasEn = student.nameEn && student.nameEn.trim() !== '';
+          const nameSize = displayMode === 'both' && hasEn ? '0.73rem' : '0.82rem';
+          cell.innerHTML = `
+            <div class="s-num">No.${student.num}</div>
+            <div class="s-name" style="font-size:${nameSize}">${disp.main}</div>
+            ${disp.sub ? `<div class="s-en">${disp.sub}</div>` : ''}
+          `;
+        } else {
+          cell.className = 'result-seat empty-seat';
+          cell.innerHTML = '<span style="font-size:0.7rem;opacity:0.4">空席</span>';
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function buildResultList() {
+  const tbody = document.getElementById('result-list-tbody');
+  const sorted = students.filter(s => s.active).sort((a,b) => a.num - b.num);
+  tbody.innerHTML = sorted.map(s => {
+    let seatPos = '未割当';
+    for (const [key, st] of Object.entries(assignedSeats)) {
+      if (st && st.num === s.num) {
+        const [rr, cc] = key.split('-').map(Number);
+        seatPos = `前から${rr+1}行目・左から${cc+1}列目`;
+        break;
+      }
+    }
+    return `<tr>
+      <td>${s.num}</td>
+      <td>${s.name}</td>
+      <td class="en-name-cell">${s.nameEn || '<span style="color:#ccc">—</span>'}</td>
+      <td>${seatPos}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateResultHeader() {
+  const cls = document.getElementById('result-class-label').value;
+  const date = document.getElementById('result-date-label').value;
+  const title = document.getElementById('result-title-label').value;
+  document.getElementById('result-header-text').textContent = [cls, title, date].filter(Boolean).join('　');
+}
+
+// ==============================
+// EXCEL EXPORT (ExcelJS版)
+// ==============================
+async function downloadExcel() {
+  if (!assignedSeats) { showToast('先に抽選を完了してください', 'error'); return; }
+
+  const className = document.getElementById('result-class-label').value || '---';
+  const dateStr   = document.getElementById('result-date-label').value   || '---';
+  const titleStr  = document.getElementById('result-title-label').value  || '座席表';
+  const hasEnNames = students.some(s => s.active && s.nameEn && s.nameEn.trim() !== '');
+
+  // 座席枠色をCSSから取得
+  function hexToRgb(hex) {
+    hex = (hex || '#7396c8').replace('#','').trim();
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    if (hex.length !== 6) hex = '7396c8';
+    const n = parseInt(hex, 16);
+    return { argb: 'FF'+hex.toUpperCase() };
+  }
+  const rawColor = getComputedStyle(document.documentElement).getPropertyValue('--seat-border').trim();
+  const numBgColor = hexToRgb(rawColor);
+
+  const wb = new ExcelJS.Workbook();
+
+  buildSeatSheetEJS(wb, className, dateStr, titleStr, 'ja', 'student', '①日本語（生徒目線）', numBgColor);
+  buildSeatSheetEJS(wb, className, dateStr, titleStr, 'ja', 'teacher', '②日本語（教師目線）', numBgColor);
+  if (hasEnNames) {
+    buildSeatSheetEJS(wb, className, dateStr, titleStr, 'en', 'student', '③English（生徒目線）', numBgColor);
+    buildSeatSheetEJS(wb, className, dateStr, titleStr, 'en', 'teacher', '④English（教師目線）', numBgColor);
+  }
+
+  // 名簿シート
+  const ws = wb.addWorksheet('名簿');
+  ws.columns = [
+    {header:'出席番号', key:'num', width:10},
+    {header:'名前（日本語）', key:'name', width:18},
+    {header:'Name (English)', key:'nameEn', width:22},
+    {header:'座席位置', key:'pos', width:18}
+  ];
+  ws.getRow(1).font = {bold:true};
+  students.filter(s => s.active).sort((a,b) => a.num - b.num).forEach(s => {
+    let rowPos = '-', colPos = '-';
+    for (const [key, st] of Object.entries(assignedSeats)) {
+      if (st && st.num === s.num) {
+        const [rr, cc] = key.split('-').map(Number);
+        rowPos = String(rr+1); colPos = String(cc+1); break;
+      }
+    }
+    const pos = rowPos !== '-' ? `前${rowPos}行・左${colPos}列` : '未割当';
+    ws.addRow([s.num, s.name, s.nameEn || '', pos]);
+  });
+
+  const fname = `席替え_${className}_${dateStr.replace(/\//g,'')}.xlsx`;
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Excelをダウンロードしました', 'success');
+}
+
+// ExcelJS版 座席シート生成
+function buildSeatSheetEJS(wb, className, dateStr, titleStr, lang, persp, sheetName, numBgColor) {
+  const isTeacher = (persp === 'teacher');
+  const isEn      = (lang === 'en');
+
+  // 名前取得
+  function getNames(student) {
+    const ruby  = (student.nameRuby || '').trim();
+    const kanji = (student.name     || '').trim();
+    const en    = (student.nameEn   || '').trim();
+    if (isEn) return { yomi: ruby, bottom: en || kanji };
+    return { yomi: ruby, bottom: kanji };
+  }
+
+  // 行・列順
+  const rowOrder = isTeacher
+    ? Array.from({length: rows}, (_, i) => rows - 1 - i)
+    : Array.from({length: rows}, (_, i) => i);
+  const colOrder = isTeacher
+    ? Array.from({length: cols}, (_, i) => cols - 1 - i)
+    : Array.from({length: cols}, (_, i) => i);
+
+  // 番号セルの色（ARGBから {argb} 形式へ）
+  const numArgb = numBgColor.argb; // 例: 'FF7396C8'
+
+  // ── ExcelJSでシート作成 ──
+  const ws = wb.addWorksheet(sheetName);
+
+  // 列幅設定: 1座席 = 番号列 + 名前列 + gap列（最後以外）
+  // 列インデックス（1始まり）: 座席ci → numCol=ci*3+1, nameCol=ci*3+2, gapCol=ci*3+3
+  const colDefs = [];
+  for (let i = 0; i < cols; i++) {
+    colDefs.push({ width: 5   }); // 番号列
+    colDefs.push({ width: 14  }); // 名前列
+    if (i < cols - 1) colDefs.push({ width: 1.5 }); // gap列
+  }
+  ws.columns = colDefs;
+
+  const totalExCols = cols * 3 - 1; // 合計列数
+
+  // ヘルパー: ExcelJS の行番号・列番号（1始まり）でセル取得
+  function gc(exRow, exCol) { return ws.getCell(exRow, exCol); }
+
+  // セルにスタイルを一括適用するヘルパー
+  // outerBorder: true のとき外枠を太線(medium)、内側は細線(thin)で描画
+  function applyStyle(cell, { bgArgb, fontColor, fontSize, bold, hAlign, vAlign,
+                               borderColor, borderStyle, outerSides }) {
+    if (bgArgb) {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
+    }
+    const fontObj = {};
+    if (fontColor) fontObj.color = { argb: fontColor };
+    if (fontSize)  fontObj.size  = fontSize;
+    if (bold)      fontObj.bold  = true;
+    fontObj.name = 'Meiryo';
+    cell.font = fontObj;
+    cell.alignment = {
+      horizontal: hAlign || 'left',
+      vertical:   vAlign || 'middle',
+      wrapText:   false
+    };
+    if (borderColor) {
+      const thick = { style: 'medium', color: { argb: borderColor } };
+      const thin  = { style: 'thin',   color: { argb: borderColor } };
+      // outerSides: 外枠にしたい辺の配列 e.g. ['top','left','bottom','right']
+      const sides = outerSides || [];
+      cell.border = {
+        top:    { style: sides.includes('top')    ? 'medium' : 'thin', color: { argb: borderColor } },
+        left:   { style: sides.includes('left')   ? 'medium' : 'thin', color: { argb: borderColor } },
+        bottom: { style: sides.includes('bottom') ? 'medium' : 'thin', color: { argb: borderColor } },
+        right:  { style: sides.includes('right')  ? 'medium' : 'thin', color: { argb: borderColor } },
+      };
+    }
+  }
+
+  let curRow = 1; // ExcelJSは1始まり
+
+  // ── タイトル行 ──
+  const perspLabel = isTeacher
+    ? (isEn ? ' [Teacher View]' : '（教師目線）')
+    : (isEn ? ' [Student View]' : '（生徒目線）');
+  const titleText = [className, titleStr + (isEn ? ' (English)' : '') + perspLabel, dateStr]
+    .filter(Boolean).join('　');
+
+  ws.getRow(curRow).height = 24;
+  const titleCell = gc(curRow, 1);
+  titleCell.value = titleText;
+  applyStyle(titleCell, { fontSize: 14, bold: true, hAlign: 'center', vAlign: 'middle' });
+  ws.mergeCells(curRow, 1, curRow, totalExCols);
+  curRow++;
+
+  // ── 教卓（生徒目線=上） ──
+  // 教卓の横幅 = 座席1つ分(番号列+名前列) × cols + gap列 × (cols-1)
+  //            = totalExCols と同じだが、実際の座席幅に揃える
+  const deskLabel = isEn ? "[ Teacher's Desk / Front ]" : '教卓';
+  // 教卓は全列結合（座席グリッドと同幅）
+  const deskEndCol = cols * 2; // 番号列+名前列の合計数（gap列を除く）→ 全列と同じtotalExColsを使う
+  function addDesk() {
+    ws.getRow(curRow).height = 20;
+    const dc = gc(curRow, 1);
+    dc.value = deskLabel;
+    applyStyle(dc, {
+      bgArgb: 'FF111111', fontColor: 'FFFFFFFF', fontSize: 11, bold: true,
+      hAlign: 'center', vAlign: 'middle'
+    });
+    // 座席グリッド全体と同じ幅で結合（gap列も含む）
+    ws.mergeCells(curRow, 1, curRow, totalExCols);
+    curRow++;
+  }
+
+  if (!isTeacher) {
+    addDesk();
+    ws.getRow(curRow).height = 5; curRow++; // 空白行
+  }
+
+  // ── 座席グリッド ──
+  for (const r of rowOrder) {
+    const topRow = curRow;
+    const botRow = curRow + 1;
+
+    ws.getRow(topRow).height = 16;
+    ws.getRow(botRow).height = 22;
+
+    for (let ci = 0; ci < colOrder.length; ci++) {
+      const c       = colOrder[ci];
+      const numExCol  = ci * 3 + 1; // 番号列（1始まり）
+      const nameExCol = ci * 3 + 2; // 名前列
+
+      const isNull  = (seatLayout[r][c] === null);
+      const student = isNull ? null : (assignedSeats ? assignedSeats[`${r}-${c}`] : null);
+      const isEmpty = isNull || !student;
+
+      const bgC = isEmpty ? 'FFCCCCCC' : numArgb;
+
+      // 各座席の外枠辺を決定
+      // 番号列は座席の左・上・下が外枠、名前列は座席の右・上・下が外枠
+      // 内側（番号列right / 名前列left）は細線
+      const isFirstRow = (topRow === (isTeacher ? rowOrder[rowOrder.length-1] : rowOrder[0]));
+      const numOuterSides  = ['top', 'left',  'bottom'];        // 番号列の外枠辺
+      const yomiOuterSides = ['top', 'right'];                  // 読み仮名セルの外枠辺
+      const kanjiOuterSides= ['bottom', 'right'];               // 漢字セルの外枠辺
+      const bdrMain  = 'FF444444'; // 外枠色
+      const bdrInner = 'FFCCCCCC'; // 内側細線色
+
+      // 番号セル（縦2行結合）
+      const numCell = gc(topRow, numExCol);
+      numCell.value = isEmpty ? '' : student.num;
+      applyStyle(numCell, {
+        bgArgb: bgC,
+        fontColor: isEmpty ? 'FF888888' : 'FFFFFFFF',
+        fontSize: 11, bold: true,
+        hAlign: 'center', vAlign: 'middle',
+        borderColor: bdrMain,
+        outerSides: numOuterSides
+      });
+      ws.mergeCells(topRow, numExCol, botRow, numExCol);
+
+      if (!isEmpty) {
+        const { yomi, bottom } = getNames(student);
+
+        // 読み仮名セル（上段・右）
+        const yomiCell = gc(topRow, nameExCol);
+        yomiCell.value = yomi;
+        applyStyle(yomiCell, {
+          fontSize: 8, fontColor: 'FF555555',
+          hAlign: 'left', vAlign: 'middle',
+          borderColor: bdrMain,
+          outerSides: yomiOuterSides
+        });
+
+        // 漢字/英語名セル（下段・右）
+        const kanjiCell = gc(botRow, nameExCol);
+        kanjiCell.value = bottom;
+        applyStyle(kanjiCell, {
+          fontSize: 12, bold: true, fontColor: 'FF111111',
+          hAlign: 'left', vAlign: 'middle',
+          borderColor: bdrMain,
+          outerSides: kanjiOuterSides
+        });
+      } else {
+        // 空席
+        const yomiCell = gc(topRow, nameExCol);
+        yomiCell.value = '';
+        applyStyle(yomiCell, {
+          fontSize: 8, fontColor: 'FFAAAAAA', hAlign: 'center', vAlign: 'middle',
+          borderColor: bdrMain, outerSides: yomiOuterSides
+        });
+        const kanjiCell = gc(botRow, nameExCol);
+        kanjiCell.value = isEn ? '(Empty)' : '空席';
+        applyStyle(kanjiCell, {
+          fontSize: 10, fontColor: 'FFAAAAAA', hAlign: 'center', vAlign: 'middle',
+          borderColor: bdrMain, outerSides: kanjiOuterSides
+        });
+      }
+    }
+
+    curRow += 2;
+    ws.getRow(curRow).height = 6; curRow++; // 座席間スペース
+  }
+
+  // ── 教師目線=教卓を下部に追加 ──
+  if (isTeacher) {
+    ws.getRow(curRow).height = 5; curRow++; // 空白
+    addDesk();
+  }
+}
+
+function printResult() { window.print(); }
+
+// ==============================
+// UTILS
+// ==============================
+function shuffleArray(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function showToast(msg, type = '') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast' + (type ? ` ${type}` : '');
+  toast.innerHTML = msg;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.transition='opacity 0.4s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),400); }, 2800);
+}
+
+function triggerConfetti() {
+  if (typeof confetti === 'undefined') return;
+  const fire = (ratio, opts) => confetti({ origin:{y:0.6}, zIndex:9999, particleCount: Math.floor(200*ratio), ...opts });
+  fire(0.25, { spread:26, startVelocity:55 });
+  fire(0.20, { spread:60 });
+  fire(0.35, { spread:100, decay:0.91, scalar:0.8 });
+  fire(0.10, { spread:120, startVelocity:25, decay:0.92, scalar:1.2 });
+  fire(0.10, { spread:120, startVelocity:45 });
+}
+
+function flashScreen() {
+  const overlay = document.getElementById('flash-overlay');
+  overlay.classList.add('flash');
+  setTimeout(() => overlay.classList.remove('flash'), 200);
+}
+
+function generateStars() {
+  const bg = document.getElementById('stars-bg');
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 3 + 1;
+    star.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}vw;top:${Math.random()*100}vh;animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2}s;opacity:${Math.random()*0.5};`;
+    bg.appendChild(star);
+  }
+}
+</script>
+</body>
+</html>

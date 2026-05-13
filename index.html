@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>席替え抽選システム ― Cela Shuffle ― 🎲</title>
+  <title>席替え抽選システム — Cela Shuffle —</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -442,7 +442,7 @@
       margin-bottom: 8px;
       box-shadow: 0 0 16px rgba(240,165,0,0.5);
     }
-    .lottery-grid { display: inline-grid; gap: 8px; }
+    .lottery-grid { display: inline-grid; gap: 8px 18px; }
     .lottery-desk {
       /* width/height はJS側でインラインスタイルで設定 */
       border-radius: 9px;
@@ -469,7 +469,7 @@
       box-shadow: 0 0 18px rgba(6,185,108,0.45);
     }
     .lottery-desk .roll-name {
-      font-size: 0.78rem;
+      font-size: 1.05rem;
       font-weight: 700;
       color: #7ab8ff;
       text-align: center;
@@ -481,7 +481,7 @@
     }
     .lottery-desk.confirmed .roll-name { color: #4ade80; animation: none; }
     .lottery-desk .roll-num {
-      font-size: 0.68rem;
+      font-size: 0.92rem;
       color: #5a7ab0;
       margin-bottom: 2px;
     }
@@ -509,8 +509,9 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 2px 6px;
+      padding: 8px 8px 8px;
       overflow: hidden;
+      gap: 4px;
     }
     #lottery-overlay.open { display: flex; }
     .lottery-title {
@@ -536,17 +537,48 @@
 
     /* 抽選グリッドを画面内に収めるコンテナ */
     #lottery-grid-container {
-      flex: 1;
+      flex: 1 1 0;
       display: flex;
       align-items: center;
       justify-content: center;
       width: 100%;
-      overflow: hidden;
+      overflow: visible;
       min-height: 0;
     }
     .lottery-classroom {
-      /* サイズはJSで動的にscaleを設定 */
       transform-origin: center center;
+      flex-shrink: 0;
+    }
+
+    /* ===== FONT SIZE TOGGLE ===== */
+    .font-size-toggle {
+      position: absolute;
+      top: 16px; left: 16px;
+      display: flex; align-items: center; gap: 5px;
+      z-index: 10;
+    }
+    .font-size-btn {
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+    .font-size-btn:hover { background: rgba(255,255,255,0.22); color: white; }
+    .font-size-btn.active {
+      background: #ffd166;
+      color: #1a1a1a;
+      border-color: #ffd166;
+    }
+    .font-size-label {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.75rem;
+      margin-right: 2px;
     }
 
     /* Sound toggle in overlay */
@@ -801,8 +833,8 @@
 <header>
   <div class="logo">🎲</div>
   <div>
-    <h1>席替え抽選システム ― Cela Shuffle ―</h1>
-    <div class="subtitle">楽しく、スムーズに席替えを演出！</div>
+    <h1>席替え抽選システム — Cela Shuffle —</h1>
+    <div class="subtitle">楽しく、スムーズに席替えを演出 🎲</div>
   </div>
 </header>
 
@@ -833,8 +865,8 @@
         <div class="card-title"><i class="fas fa-paste"></i> 一括入力（コピー＆ペースト）</div>
         <div class="alert alert-info">
           <i class="fas fa-info-circle"></i>
-          <strong>形式：</strong>「番号 よみがな 漢字名」または「番号 よみがな 漢字名 英語名」<br>
-          例：<code>1 すずきあきこ 鈴木明子</code>　または　<code>1 すずきあきこ 鈴木明子 Akiko Suzuki</code>
+          <strong>形式：</strong>「番号 漢字名」または「番号 よみがな 漢字名」または「番号 よみがな 漢字名 英語名」<br>
+          例：<code>1 鈴木明子</code>　または　<code>1 すずきあきこ 鈴木明子</code>　または　<code>1 すずきあきこ 鈴木明子 Akiko Suzuki</code>
         </div>
         <div class="form-group" style="margin-bottom:12px">
           <label>貼り付けエリア（1行1人）</label>
@@ -844,6 +876,7 @@
 3	鈴木朋子
 4	すずきあきこ	鈴木明子	Akiko Suzuki
 
+※よみがなは任意（省略可）
 ※英語名は任意（省略可）"></textarea>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1172,6 +1205,14 @@
 <!-- ===== LOTTERY OVERLAY ===== -->
 <div class="stars-bg" id="stars-bg"></div>
 <div id="lottery-overlay">
+  <!-- Font size toggle -->
+  <div class="font-size-toggle">
+    <span class="font-size-label">文字</span>
+    <button class="font-size-btn" onclick="setLotteryFontSize('small')">小</button>
+    <button class="font-size-btn active" onclick="setLotteryFontSize('medium')">中</button>
+    <button class="font-size-btn" onclick="setLotteryFontSize('large')">大</button>
+    <button class="font-size-btn" onclick="setLotteryFontSize('xlarge')">特大</button>
+  </div>
   <!-- Sound toggle in overlay -->
   <div class="sound-toggle-overlay" onclick="toggleSoundInOverlay()">
     <i class="fas" id="overlay-sound-icon"></i>
@@ -1941,6 +1982,46 @@ function updateOverlaySoundUI() {
   document.getElementById('overlay-sound-text').textContent = enabled ? '音あり' : '音なし';
 }
 
+// ===== 文字サイズ切り替え（ボタン式）=====
+const BASE_DESK_W = 150;
+const BASE_DESK_H = 88;
+let currentDeskW = 150;
+let currentDeskH = 88;
+
+function setLotteryFontSize(size) {
+  const sizeMap = {
+    small:  { w: 110, h: 68,  nameRem: 0.75, numRem: 0.65 },
+    medium: { w: 150, h: 88,  nameRem: 1.05, numRem: 0.92 },
+    large:  { w: 185, h: 108, nameRem: 1.35, numRem: 1.1  },
+    xlarge: { w: 220, h: 130, nameRem: 1.7,  numRem: 1.35 },
+  };
+  const { w, h, nameRem, numRem } = sizeMap[size] || sizeMap.medium;
+  currentDeskW = w;
+  currentDeskH = h;
+
+  // ボタンのactive状態を更新
+  document.querySelectorAll('.font-size-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === {small:'小',medium:'中',large:'大',xlarge:'特大'}[size]);
+  });
+
+  // 机サイズ・フォントサイズを更新
+  document.querySelectorAll('.lottery-desk').forEach(d => {
+    d.style.width  = w + 'px';
+    d.style.height = h + 'px';
+    const nameEl = d.querySelector('.roll-name');
+    const numEl  = d.querySelector('.roll-num');
+    if (nameEl) nameEl.style.fontSize = nameRem + 'rem';
+    if (numEl)  numEl.style.fontSize  = numRem  + 'rem';
+  });
+
+  // グリッド列幅更新
+  const grid = document.getElementById('lottery-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${w}px)`;
+
+  // スケール再計算（画面に必ず収まる）
+  scaleLotteryToFit(w, h, 8);
+}
+
 function toggleSoundInOverlay() {
   const cb = document.getElementById('sound-enabled');
   cb.checked = !cb.checked;
@@ -2024,12 +2105,13 @@ function buildLotteryGrid() {
   grid.innerHTML = '';
   lotteryDesks = [];
 
-  // 横長の机サイズ・統一gap
-  const deskW = 120, deskH = 68, gap = 8;
+  const deskW = currentDeskW || BASE_DESK_W;
+  const deskH = currentDeskH || BASE_DESK_H;
+  const gap   = 8;
 
-  // 全列統一gapのみ（通路なし）
   grid.style.gridTemplateColumns = `repeat(${cols}, ${deskW}px)`;
-  grid.style.gap = `${gap}px`;
+  grid.style.columnGap = `20px`;
+  grid.style.rowGap    = `${gap}px`;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -2044,7 +2126,10 @@ function buildLotteryGrid() {
       desk.style.height = deskH + 'px';
       desk.dataset.row = r; desk.dataset.col = c;
       if (!isEmpty) {
-        desk.innerHTML = `<div class="roll-num">?</div><div class="roll-name">---</div>`;
+        const ratio = deskW / BASE_DESK_W;
+        const nameFontSize = (1.05 * ratio).toFixed(3);
+        const numFontSize  = (0.92 * ratio).toFixed(3);
+        desk.innerHTML = `<div class="roll-num" style="font-size:${numFontSize}rem">?</div><div class="roll-name" style="font-size:${nameFontSize}rem">---</div>`;
       }
       grid.appendChild(desk);
       lotteryDesks.push({ el: desk, r, c, isEmpty, isFixed });
@@ -2060,50 +2145,67 @@ function scaleLotteryToFit(deskW, deskH, gap) {
   const container = document.getElementById('lottery-grid-container');
   const overlay   = document.getElementById('lottery-overlay');
 
-  // いったんscaleをリセットして実際のサイズを測定
-  classroom.style.transform = 'scale(1)';
-  container.style.height = 'auto';
-  container.style.flex   = '1';
-  container.style.flexShrink = '1';
+  // まずscaleをリセット
+  classroom.style.transform       = 'scale(1)';
+  classroom.style.transformOrigin = 'center center';
+  container.style.flex            = '1 1 0';
+  container.style.height          = '';
 
-  // 非同期で実測（requestAnimationFrame で描画後に取得）
+  // overlayが非表示なら一時的に表示してサイズ計測
+  const wasHidden = !overlay.classList.contains('open');
+  if (wasHidden) {
+    overlay.style.visibility = 'hidden';
+    overlay.style.display    = 'flex';
+  }
+
   requestAnimationFrame(() => {
-    // オーバーレイ全体の高さ・幅
-    const overlayW = overlay.offsetWidth;
-    const overlayH = overlay.offsetHeight;
+    requestAnimationFrame(() => {
+      // 画面全体サイズ
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
 
-    // classroom の実際のサイズ（scale=1 時）
-    const classW = classroom.offsetWidth;
-    const classH = classroom.offsetHeight;
+      // classroom自体の自然サイズ
+      const classW = classroom.offsetWidth;
+      const classH = classroom.offsetHeight;
 
-    // コンテナが使える領域（オーバーレイ - classroom以外の要素）
-    // classroom以外の要素（タイトル・プログレス・ステータス・ボタン）の高さを合計
-    let othersH = 0;
-    overlay.querySelectorAll(':scope > *').forEach(el => {
-      if (el !== container && el.id !== 'flash-overlay') {
-        othersH += el.offsetHeight + parseInt(getComputedStyle(el).marginTop || 0) + parseInt(getComputedStyle(el).marginBottom || 0);
+      // 非表示に戻す
+      if (wasHidden) {
+        overlay.style.visibility = '';
+        overlay.style.display    = '';
       }
+
+      if (classW <= 0 || classH <= 0) return;
+
+      // overlayのpadding
+      const ovStyle = getComputedStyle(overlay);
+      const padH = parseFloat(ovStyle.paddingLeft) + parseFloat(ovStyle.paddingRight);
+      const padV = parseFloat(ovStyle.paddingTop)  + parseFloat(ovStyle.paddingBottom);
+
+      // container以外の要素（タイトル・ステータス・ボタン等）の高さを合計
+      let othersH = 0;
+      overlay.querySelectorAll(':scope > *').forEach(el => {
+        if (el === container) return;
+        const s  = getComputedStyle(el);
+        const mt = parseFloat(s.marginTop)    || 0;
+        const mb = parseFloat(s.marginBottom) || 0;
+        othersH += el.offsetHeight + mt + mb;
+      });
+
+      // containerが使える幅・高さ（余白16px）
+      const availW = vw  - padH - 16;
+      const availH = vh  - padV - othersH - 16;
+
+      if (availW <= 0 || availH <= 0) return;
+
+      // スケール計算（画面内にぴったり収める）
+      const scale = Math.min(availW / classW, availH / classH, 1.0);
+
+      classroom.style.transform = `scale(${scale})`;
+
+      // scaleで縮んだ分コンテナ高さを調整（はみ出し防止）
+      container.style.flex   = 'none';
+      container.style.height = (classH * scale) + 'px';
     });
-    // オーバーレイのpadding分
-    const overlayStyle = getComputedStyle(overlay);
-    const padV = parseFloat(overlayStyle.paddingTop) + parseFloat(overlayStyle.paddingBottom);
-    const padH = parseFloat(overlayStyle.paddingLeft) + parseFloat(overlayStyle.paddingRight);
-
-    const availW = overlayW - padH - 4;
-    const availH = overlayH - othersH - padV - 8;
-
-    const scaleX = availW / classW;
-    const scaleY = availH / classH;
-    // 余白をほぼゼロにするため 0.97 係数をかける（ギリギリまで拡大）
-    const scale  = Math.min(scaleX, scaleY, 3.0) * 0.97;
-
-    classroom.style.transform       = `scale(${scale})`;
-    classroom.style.transformOrigin = 'center center';
-
-    // コンテナ高さを scaled サイズに合わせる
-    container.style.height    = (classH * scale) + 'px';
-    container.style.flex      = 'none';
-    container.style.flexShrink = '0';
   });
 }
 
@@ -2670,3 +2772,4 @@ function generateStars() {
 </script>
 </body>
 </html>
+
